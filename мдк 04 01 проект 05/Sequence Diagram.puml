@@ -1,0 +1,33 @@
+@startuml База данных аренды жилья: Sequence Diagram
+
+actor Арендатор as Tenant
+participant "Система" as System
+participant "БД" as DB
+actor Арендодатель as Landlord
+
+== Бронирование жилья ==
+
+Tenant -> System: Поиск жилья
+System -> DB: Запрос свойств
+DB --> System: Результаты
+System --> Tenant: Список свойств
+
+Tenant -> System: Выбрать свойство
+System -> DB: Проверить доступность
+DB --> System: Доступно
+System --> Tenant: Подтверждение цены
+
+Tenant -> System: Подтвердить бронь
+System -> DB: Создать бронирование
+DB --> System: ID брони
+System -> Landlord: Уведомление
+System --> Tenant: Подтверждение
+
+== Размещение объявления ==
+
+Landlord -> System: Добавить свойство
+System -> DB: Создать свойство
+DB --> System: ID свойства
+System --> Landlord: Подтверждение
+
+@enduml

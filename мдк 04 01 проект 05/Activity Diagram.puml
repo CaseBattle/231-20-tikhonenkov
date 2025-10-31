@@ -1,0 +1,15 @@
+@startuml
+
+actor "Арендатор" as Tenant
+actor "Арендодатель" as Landlord
+
+rectangle "Платформа аренды жилья" {
+  Tenant --> (Поиск жилья)
+  Tenant --> (Бронирование жилья)
+  Tenant --> (Оплата аренды)
+  
+  Landlord --> (Размещение объявлений)
+  Landlord --> (Управление бронированиями)
+}
+
+@enduml
