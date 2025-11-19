@@ -1,0 +1,19 @@
+{
+  "name": "portfolio-auth-php",
+  "version": "1.0.0",
+  "description": "Мини-приложение авторизации на PHP с запуском через Node.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "php",
+    "sqlite",
+    "auth",
+    "portfolio"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
+

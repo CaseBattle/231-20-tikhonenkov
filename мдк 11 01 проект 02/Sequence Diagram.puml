@@ -1,0 +1,35 @@
+@startuml
+
+actor Арендатор as Tenant
+participant "Система" as System
+participant "БД" as DB
+actor Арендодатель as Landlord
+
+== Поиск жилья ==
+
+Tenant -> System: Поиск жилья
+System -> DB: Запрос объявлений
+DB --> System: Результаты
+System --> Tenant: Список объявлений
+
+== Бронирование жилья ==
+
+Tenant -> System: Выбрать объявление
+System -> DB: Проверить доступность
+DB --> System: Доступно
+System -> Tenant: Подтвердить бронь
+
+Tenant -> System: Подтверждение брони
+System -> DB: Создать бронирование
+DB --> System: ID брони
+System -> Landlord: Уведомление
+System --> Tenant: Подтверждение
+
+== Размещение объявлений ==
+
+Landlord -> System: Разместить объявление
+System -> DB: Создать объявление
+DB --> System: ID объявления
+System --> Landlord: Подтверждение
+
+@enduml
