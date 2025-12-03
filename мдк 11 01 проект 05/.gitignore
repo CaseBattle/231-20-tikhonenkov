@@ -1,0 +1,15 @@
+vendor/
+.phpunit.cache/
+tests/logs/*
+!tests/logs/.gitignore
+.env
+.env.*
+composer.lock
+*.log
+*.cache
+.DS_Store
+Thumbs.db
+
+
+
+
