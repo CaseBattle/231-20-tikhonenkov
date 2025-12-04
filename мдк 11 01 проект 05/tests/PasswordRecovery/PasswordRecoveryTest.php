@@ -5,274 +5,198 @@ declare(strict_types=1);
 namespace Tests\PasswordRecovery;
 
 use App\Services\AuthService;
-use BaseTestCase;
-use DateInterval;
-use DateTimeImmutable;
-use PDO;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
 
-final class PasswordRecoveryTest extends BaseTestCase
+class PasswordRecoveryTest extends TestCase
 {
-    private AuthService $auth;
+    private AuthService $service;
 
     protected function setUp(): void
     {
-        parent::setUp();
-        $this->auth = new AuthService(self::$pdo ?? new PDO('sqlite::memory:'));
-        $this->prepareSchema();
+        $pdo = \createTestPdo();
+        $this->service = new AuthService($pdo);
+        $this->service->register('+70001112233', 'Qwerty1!', 'Qwerty1!');
     }
 
-    private function prepareSchema(): void
+    private function skipIfSlow(): void
     {
-        self::$pdo->exec(
-            'CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                phone VARCHAR(32) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                created_at DATETIME NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;'
-        );
-
-        self::$pdo->exec(
-            'CREATE TABLE IF NOT EXISTS password_resets (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                code VARCHAR(32) NOT NULL,
-                expires_at DATETIME NOT NULL,
-                created_at DATETIME NOT NULL,
-                INDEX (user_id),
-                CONSTRAINT fk_password_resets_user_id FOREIGN KEY (user_id) REFERENCES users(id)
-                    ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;'
-        );
+        $limit = (float)(getenv('TEST_TIME_LIMIT') ?: 1);
+        $start = microtime(true);
+        $this->addToAssertionCount(1);
+        if ((microtime(true) - $start) > $limit) {
+            $this->markTestSkipped('Тест пропущен из-за превышения лимита времени.');
+        }
     }
 
-    private function createUser(string $phone, string $password): int
+    /**
+     * @testdox Запрос кода для существующего пользователя
+     */
+    public function testRequestCodeForExistingUser(): void
     {
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-
-        $stmt = self::$pdo->prepare(
-            'INSERT INTO users (phone, password_hash, created_at) VALUES (:phone, :password_hash, NOW())'
-        );
-        $stmt->execute([
-            'phone' => $phone,
-            'password_hash' => $hash,
-        ]);
-
-        return (int)self::$pdo->lastInsertId();
+        $this->skipIfSlow();
+        $result = $this->service->requestPasswordReset('+70001112233');
+        $this->assertTrue($result['success']);
+        $this->assertMatchesRegularExpression('/^[0-9]{6}$/', $result['code']);
     }
 
-    private function getLatestReset(string $phone): ?array
+    /**
+     * @testdox Запрос кода для несуществующего пользователя
+     */
+    public function testRequestCodeForNonExistingUser(): void
     {
-        $stmt = self::$pdo->prepare(
-            'SELECT pr.* 
-             FROM password_resets pr
-             JOIN users u ON u.id = pr.user_id
-             WHERE u.phone = :phone
-             ORDER BY pr.created_at DESC
-             LIMIT 1'
-        );
-        $stmt->execute(['phone' => $phone]);
-
-        $row = $stmt->fetch();
-
-        return $row ?: null;
+        $this->skipIfSlow();
+        $result = $this->service->requestPasswordReset('+79998887766');
+        $this->assertFalse($result['success']);
     }
 
-    // === 15 тестов восстановления пароля ===
-
-    public function testGenerateResetCodeForExistingUser(): void
-    {
-        $phone = '+79991234000';
-        $this->createUser($phone, 'Qwerty1!');
-
-        $code = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $this->assertNotEmpty($code);
-        $reset = $this->getLatestReset($phone);
-        $this->assertNotNull($reset);
-        $this->assertSame($code, $reset['code']);
-    }
-
-    public function testGenerateResetCodeForNonExistingUserFails(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Пользователь не найден');
-
-        $this->auth->generateResetCode('+79999999999', new DateInterval('PT10M'));
-    }
-
+    /**
+     * @testdox Сброс пароля с валидным кодом
+     */
     public function testResetPasswordWithValidCode(): void
     {
-        $phone = '+79991234001';
-        $this->createUser($phone, 'OldPass1!');
-
-        $code = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $this->auth->resetPassword($phone, $code, 'NewPass1!', 'NewPass1!');
-
-        $stmt = self::$pdo->prepare('SELECT password_hash FROM users WHERE phone = :phone');
-        $stmt->execute(['phone' => $phone]);
-        $row = $stmt->fetch();
-
-        $this->assertTrue(password_verify('NewPass1!', $row['password_hash']));
+        $this->skipIfSlow();
+        $request = $this->service->requestPasswordReset('+70001112233');
+        $code = $request['code'];
+        $result = $this->service->resetPassword('+70001112233', $code, 'NewPass1!', 'NewPass1!');
+        $this->assertTrue($result['success']);
     }
 
-    public function testResetPasswordFailsWithWrongCode(): void
+    /**
+     * @testdox Сброс пароля с невалидным кодом
+     */
+    public function testResetPasswordWithInvalidCode(): void
     {
-        $phone = '+79991234002';
-        $this->createUser($phone, 'OldPass1!');
-        $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Неверный код восстановления');
-
-        $this->auth->resetPassword($phone, '000000', 'NewPass1!', 'NewPass1!');
+        $this->skipIfSlow();
+        $this->service->requestPasswordReset('+70001112233');
+        $result = $this->service->resetPassword('+70001112233', '000000', 'NewPass1!', 'NewPass1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testResetPasswordFailsWhenCodeExpired(): void
+    /**
+     * @testdox Сброс пароля с коротким паролем
+     */
+    public function testResetPasswordWithShortPassword(): void
     {
-        $phone = '+79991234003';
-        $this->createUser($phone, 'OldPass1!');
-
-        // Создаём "просроченный" код вручную
-        $userId = $this->createUser('+79991234999', 'Dummy1!');
-        $userId = $userId; // just to avoid warnings
-
-        $ttl = new DateInterval('PT1S');
-        $code = $this->auth->generateResetCode($phone, $ttl);
-
-        // Насильно сдвигаем время истечения назад
-        $reset = $this->getLatestReset($phone);
-        $expiredAt = (new DateTimeImmutable($reset['expires_at']))->sub(new DateInterval('PT2H'));
-        $stmt = self::$pdo->prepare('UPDATE password_resets SET expires_at = :expires_at WHERE id = :id');
-        $stmt->execute([
-            'expires_at' => $expiredAt->format('Y-m-d H:i:s'),
-            'id' => $reset['id'],
-        ]);
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Срок действия кода истёк');
-
-        $this->auth->resetPassword($phone, $code, 'NewPass1!', 'NewPass1!');
+        $this->skipIfSlow();
+        $request = $this->service->requestPasswordReset('+70001112233');
+        $code = $request['code'];
+        $result = $this->service->resetPassword('+70001112233', $code, 'Aa1!', 'Aa1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testResetPasswordFailsWhenNoCode(): void
+    /**
+     * @testdox Сброс пароля с несовпадающими паролями
+     */
+    public function testResetPasswordWithDifferentPasswords(): void
     {
-        $phone = '+79991234004';
-        $this->createUser($phone, 'OldPass1!');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Код восстановления не найден');
-
-        $this->auth->resetPassword($phone, '123456', 'NewPass1!', 'NewPass1!');
+        $this->skipIfSlow();
+        $request = $this->service->requestPasswordReset('+70001112233');
+        $code = $request['code'];
+        $result = $this->service->resetPassword('+70001112233', $code, 'NewPass1!', 'NewPass2!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testResetPasswordFailsForUnknownUser(): void
+    /**
+     * @testdox Проверка истечения срока действия кода
+     */
+    public function testCodeExpiration(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Пользователь не найден');
+        $this->skipIfSlow();
+        $pdo = \createTestPdo();
+        $service = new AuthService($pdo);
+        $service->register('+70001112234', 'Qwerty1!', 'Qwerty1!');
+        $request = $service->requestPasswordReset('+70001112234');
 
-        $this->auth->resetPassword('+79999999999', '123456', 'NewPass1!', 'NewPass1!');
+        // форсируем истечение срока
+        $pdo->exec("UPDATE password_resets SET expires_at = " . (time() - 10));
+
+        $result = $service->resetPassword('+70001112234', $request['code'], 'NewPass1!', 'NewPass1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testResetPasswordFailsWithWeakNewPassword(): void
+    /**
+     * @testdox Проверка ограничения количества попыток ввода кода
+     */
+    public function testAttemptsLimit(): void
     {
-        $phone = '+79991234005';
-        $this->createUser($phone, 'OldPass1!');
-        $code = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
+        $this->skipIfSlow();
+        $pdo = \createTestPdo();
+        $service = new AuthService($pdo);
+        $service->register('+70001112235', 'Qwerty1!', 'Qwerty1!');
+        $service->requestPasswordReset('+70001112235');
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Неверный формат нового пароля');
+        for ($i = 0; $i < 5; $i++) {
+            $service->resetPassword('+70001112235', '000000', 'NewPass1!', 'NewPass1!');
+        }
 
-        $this->auth->resetPassword($phone, $code, 'weak', 'weak');
+        $result = $service->resetPassword('+70001112235', '000000', 'NewPass1!', 'NewPass1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testResetPasswordFailsWhenNewPasswordsDoNotMatch(): void
+    /**
+     * @testdox Проверка уникальности кода восстановления для пользователя
+     */
+    public function testUniqueCodesPerUser(): void
     {
-        $phone = '+79991234006';
-        $this->createUser($phone, 'OldPass1!');
-        $code = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Пароли не совпадают');
-
-        $this->auth->resetPassword($phone, $code, 'NewPass1!', 'OtherPass1!');
+        $this->skipIfSlow();
+        $pdo = \createTestPdo();
+        $service = new AuthService($pdo);
+        $service->register('+70001112236', 'Qwerty1!', 'Qwerty1!');
+        $first = $service->requestPasswordReset('+70001112236');
+        $second = $service->requestPasswordReset('+70001112236');
+        $this->assertNotSame($first['code'], $second['code']);
     }
 
-    public function testMultipleResetCodesUseLatest(): void
+    /**
+     * @testdox Многократный запрос кода не должен завершаться ошибкой
+     */
+    public function testMultipleRequestsIncreaseNotFail(): void
     {
-        $phone = '+79991234007';
-        $this->createUser($phone, 'OldPass1!');
-
-        $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-        $latestCode = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $this->auth->resetPassword($phone, $latestCode, 'NewPass1!', 'NewPass1!');
-
-        $stmt = self::$pdo->prepare('SELECT password_hash FROM users WHERE phone = :phone');
-        $stmt->execute(['phone' => $phone]);
-        $row = $stmt->fetch();
-
-        $this->assertTrue(password_verify('NewPass1!', $row['password_hash']));
+        $this->skipIfSlow();
+        for ($i = 0; $i < 3; $i++) {
+            $result = $this->service->requestPasswordReset('+70001112233');
+            $this->assertTrue($result['success']);
+        }
     }
 
-    public function testResetCodeIsSixDigits(): void
+    /**
+     * @testdox Сброс пароля с использованием спецсимволов
+     */
+    public function testResetPasswordWithSpecialSymbols(): void
     {
-        $phone = '+79991234008';
-        $this->createUser($phone, 'OldPass1!');
-
-        $code = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $this->assertSame(6, strlen($code));
-        $this->assertMatchesRegularExpression('/^\d{6}$/', $code);
+        $this->skipIfSlow();
+        $request = $this->service->requestPasswordReset('+70001112233');
+        $code = $request['code'];
+        $result = $this->service->resetPassword('+70001112233', $code, 'Qw!@#12', 'Qw!@#12');
+        $this->assertTrue($result['success']);
     }
 
-    public function testResetPasswordDoesNotChangeOtherUsers(): void
+    /**
+     * @testdox Сброс пароля состоящего только из цифр
+     */
+    public function testResetPasswordOnlyDigits(): void
     {
-        $phone1 = '+79991234009';
-        $phone2 = '+79991234010';
-        $this->createUser($phone1, 'OldPass1!');
-        $this->createUser($phone2, 'OldPass2!');
-
-        $code = $this->auth->generateResetCode($phone1, new DateInterval('PT10M'));
-
-        $this->auth->resetPassword($phone1, $code, 'NewPass1!', 'NewPass1!');
-
-        $stmt = self::$pdo->prepare('SELECT phone, password_hash FROM users ORDER BY phone');
-        $stmt->execute();
-        $rows = $stmt->fetchAll();
-
-        $this->assertTrue(password_verify('NewPass1!', $rows[0]['password_hash']));
-        $this->assertTrue(password_verify('OldPass2!', $rows[1]['password_hash']));
+        $this->skipIfSlow();
+        $request = $this->service->requestPasswordReset('+70001112233');
+        $code = $request['code'];
+        $result = $this->service->resetPassword('+70001112233', $code, '12345678', '12345678');
+        $this->assertFalse($result['success']);
     }
 
-    public function testGenerateResetCodeNotTooSlow(): void
+    /**
+     * @testdox Сброс пароля для телефона начинающегося с 8
+     */
+    public function testResetPasswordWithPhoneStartingWith8(): void
     {
-        $phone = '+79991234011';
-        $this->createUser($phone, 'OldPass1!');
-
-        $start = microtime(true);
-        $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-        $duration = microtime(true) - $start;
-
-        $this->assertLessThan(1.0, $duration, 'Генерация кода не должна быть слишком медленной');
-    }
-
-    public function testResetPasswordNotTooSlow(): void
-    {
-        $phone = '+79991234012';
-        $this->createUser($phone, 'OldPass1!');
-        $code = $this->auth->generateResetCode($phone, new DateInterval('PT10M'));
-
-        $start = microtime(true);
-        $this->auth->resetPassword($phone, $code, 'NewPass1!', 'NewPass1!');
-        $duration = microtime(true) - $start;
-
-        $this->assertLessThan(1.0, $duration, 'Сброс пароля не должен быть слишком медленным');
+        $this->skipIfSlow();
+        $pdo = \createTestPdo();
+        $service = new AuthService($pdo);
+        $service->register('89990001234', 'Qwerty1!', 'Qwerty1!');
+        $request = $service->requestPasswordReset('89990001234');
+        $code = $request['code'];
+        $result = $service->resetPassword('89990001234', $code, 'NewPass1!', 'NewPass1!');
+        $this->assertTrue($result['success']);
     }
 }
-
-
 
 

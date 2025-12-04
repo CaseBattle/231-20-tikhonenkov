@@ -2,135 +2,151 @@
 
 declare(strict_types=1);
 
-// Простая веб-страница для запуска PHPUnit-тестов и просмотра результатов.
+// Запуск PHPUnit и красивый интерфейс с группами тестов и временем выполнения.
 
-$results = null;
-$rawOutput = [];
-$exitCode = null;
-$error = null;
+$startTime = microtime(true);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cmd = (PHP_OS_FAMILY === 'Windows')
-        ? 'vendor\\bin\\phpunit --configuration phpunit.xml'
-        : 'vendor/bin/phpunit --configuration phpunit.xml';
-
-    $cmd .= ' --log-junit tests/logs/junit.xml';
-
-    @mkdir(__DIR__ . '/tests/logs', 0777, true);
-
-    exec($cmd . ' 2>&1', $rawOutput, $exitCode);
-
-    $junitFile = __DIR__ . '/tests/logs/junit.xml';
-    if (is_file($junitFile)) {
-        $xml = @simplexml_load_file($junitFile);
-        if ($xml !== false) {
-            // Ищем первый testsuite с атрибутами (обычно это второй уровень вложенности)
-            $mainSuite = null;
-            if (isset($xml->testsuite)) {
-                // Если есть вложенные testsuite, берём первый с атрибутами
-                $suites = is_array($xml->testsuite) ? $xml->testsuite : [$xml->testsuite];
-                foreach ($suites as $suite) {
-                    if (isset($suite['tests']) && (int)$suite['tests'] > 0) {
-                        $mainSuite = $suite;
-                        break;
-                    }
-                    // Если внутри есть ещё testsuite, проверяем их
-                    if (isset($suite->testsuite)) {
-                        $innerSuites = is_array($suite->testsuite) ? $suite->testsuite : [$suite->testsuite];
-                        foreach ($innerSuites as $innerSuite) {
-                            if (isset($innerSuite['tests']) && (int)$innerSuite['tests'] > 0) {
-                                $mainSuite = $innerSuite;
-                                break 2;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Извлекаем статистику из найденного testsuite
-            if ($mainSuite !== null) {
-                $results = [
-                    'tests' => (int)($mainSuite['tests'] ?? 0),
-                    'failures' => (int)($mainSuite['failures'] ?? 0),
-                    'errors' => (int)($mainSuite['errors'] ?? 0),
-                    'skipped' => (int)($mainSuite['skipped'] ?? 0),
-                    'time' => (float)($mainSuite['time'] ?? 0.0),
-                    'cases' => [],
-                ];
-            } else {
-                $results = [
-                    'tests' => 0,
-                    'failures' => 0,
-                    'errors' => 0,
-                    'skipped' => 0,
-                    'time' => 0.0,
-                    'cases' => [],
-                ];
-            }
-
-            // Рекурсивно собираем все testcase из всех testsuite
-            $collectTestCases = function($suite) use (&$collectTestCases, &$results) {
-                // Если есть testcase на этом уровне
-                if (isset($suite->testcase)) {
-                    $cases = is_array($suite->testcase) ? $suite->testcase : [$suite->testcase];
-                    foreach ($cases as $case) {
-                        $status = 'success';
-                        $message = '';
-
-                        if (isset($case->failure)) {
-                            $status = 'failure';
-                            $message = (string)($case->failure['message'] ?? $case->failure);
-                        } elseif (isset($case->error)) {
-                            $status = 'error';
-                            $message = (string)($case->error['message'] ?? $case->error);
-                        } elseif (isset($case->skipped)) {
-                            $status = 'skipped';
-                            $message = (string)($case->skipped['message'] ?? $case->skipped);
-                        }
-
-                        $results['cases'][] = [
-                            'class' => (string)($case['class'] ?? ''),
-                            'name' => (string)($case['name'] ?? ''),
-                            'time' => (float)($case['time'] ?? 0.0),
-                            'status' => $status,
-                            'message' => $message,
-                        ];
-                    }
-                }
-                
-                // Рекурсивно обрабатываем вложенные testsuite
-                if (isset($suite->testsuite)) {
-                    $innerSuites = is_array($suite->testsuite) ? $suite->testsuite : [$suite->testsuite];
-                    foreach ($innerSuites as $innerSuite) {
-                        $collectTestCases($innerSuite);
-                    }
-                }
-            };
-            
-            // Начинаем сбор с корневого элемента
-            if (isset($xml->testsuite)) {
-                $suites = is_array($xml->testsuite) ? $xml->testsuite : [$xml->testsuite];
-                foreach ($suites as $suite) {
-                    $collectTestCases($suite);
-                }
-            }
-        } else {
-            $error = 'Не удалось прочитать файл junit.xml.';
-        }
-    } else {
-        $error = 'Файл junit.xml не найден. Проверьте конфигурацию PHPUnit.';
-    }
+$composerAutoload = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($composerAutoload)) {
+    $error = 'Сначала выполните установку зависимостей: <code>composer install</code>.';
 }
 
-function statusColor(string $status): string
+$results = null;
+
+if (empty($error) && ($_GET['run'] ?? '') === '1') {
+    $logFile   = __DIR__ . '/tests/logs/testdox.txt';
+    $junitFile = __DIR__ . '/tests/logs/junit.xml';
+
+    if (!is_dir(__DIR__ . '/tests/logs')) {
+        mkdir(__DIR__ . '/tests/logs', 0777, true);
+    }
+
+    if (file_exists($logFile)) {
+        unlink($logFile);
+    }
+    if (file_exists($junitFile)) {
+        unlink($junitFile);
+    }
+
+    $command = escapeshellcmd(PHP_BINARY) . ' ' .
+        escapeshellarg(__DIR__ . '/vendor/bin/phpunit') .
+        ' --testdox';
+
+    $output   = [];
+    $exitCode = 0;
+    exec($command . ' 2>&1', $output, $exitCode);
+
+    $results = [
+        'raw_output' => implode("\n", $output),
+        'exit_code'  => $exitCode,
+        'tests'      => [],
+        'total'      => 0,
+        'passed'     => 0,
+        'failed'     => 0,
+        'errors'     => 0,
+        'skipped'    => 0,
+    ];
+
+    // Времена тестов из junit.xml (по порядку)
+    $testTimes = [];
+    if (file_exists($junitFile)) {
+        $xmlStr = file_get_contents($junitFile);
+        if ($xmlStr !== false &&
+            preg_match_all('/<testcase\b[^>]*time="([\d.]+)"/', $xmlStr, $matches)
+        ) {
+            foreach ($matches[1] as $t) {
+                $testTimes[] = (float)$t;
+            }
+        }
+    }
+
+    if (file_exists($logFile)) {
+        $lines        = file($logFile, FILE_IGNORE_NEW_LINES);
+        $currentGroup = 'Общие тесты';
+
+        foreach ($lines as $line) {
+            if ($line === '' || preg_match('/^Test Suite/', $line)) {
+                continue;
+            }
+
+            // Заголовки групп: "Login (Tests\Login\Login)" и т.п.
+            if (preg_match('/^([^(]+)\s+\(Tests\\\\(.+)\)$/', trim($line), $m)) {
+                $title = trim($m[1]);
+                switch ($title) {
+                    case 'Login':
+                        $currentGroup = 'Тесты входа';
+                        break;
+                    case 'Password Recovery':
+                        $currentGroup = 'Тесты восстановления пароля';
+                        break;
+                    case 'Registration':
+                        $currentGroup = 'Тесты регистрации';
+                        break;
+                    case 'Validation':
+                        $currentGroup = 'Тесты валидации';
+                        break;
+                    default:
+                        $currentGroup = 'Тесты общие';
+                        break;
+                }
+                continue;
+            }
+
+            // Строки тестов: "[x] Успешный вход"
+            if (preg_match('/^\s*\[\s*(.+?)\s*\]\s+(.+)$/u', $line, $m)) {
+                $statusLabel = trim($m[1]);
+                $name        = trim($m[2]);
+
+                // [x] — passed, [S] — skipped, [F] — failed, [E] — error
+                $status = 'passed';
+                if (in_array($statusLabel, ['S', 's'], true)) {
+                    $status = 'skipped';
+                    $results['skipped']++;
+                } elseif (in_array($statusLabel, ['F', 'f'], true)) {
+                    $status = 'failed';
+                    $results['failed']++;
+                } elseif (in_array($statusLabel, ['E', 'e'], true)) {
+                    $status = 'error';
+                    $results['errors']++;
+                } else {
+                    $results['passed']++;
+                }
+
+                $time = null;
+                if (!empty($testTimes)) {
+                    $time = array_shift($testTimes);
+                }
+
+                $results['tests'][] = [
+                    'group'  => $currentGroup,
+                    'name'   => $name,
+                    'status' => $status,
+                    'time'   => $time,
+                ];
+
+                $results['total']++;
+            }
+        }
+    }
+
+    $duration = microtime(true) - $startTime;
+} else {
+    $duration = 0;
+}
+
+function statusClass(string $status): string
 {
-    return match ($status) {
-        'success' => '#d4edda',
-        'failure' => '#f8d7da',
-        'error'   => '#f8d7da',
-        'skipped' => '#fff3cd',
-        default   => '#ffffff',
-    };
+    switch ($status) {
+        case 'passed':
+            return 'status-passed';
+        case 'failed':
+            return 'status-failed';
+        case 'error':
+            return 'status-error';
+        case 'skipped':
+        default:
+            return 'status-skipped';
+    }
 }
 
 ?>
@@ -138,263 +154,301 @@ function statusColor(string $status): string
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Результаты тестирования форм аутентификации</title>
+    <title>Результаты тестов аутентификации</title>
     <style>
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background-color: #f5f7fb;
             margin: 0;
-            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #4b6cb7, #182848);
+            color: #222;
         }
-
-        .container {
+        .page {
             max-width: 1100px;
-            margin: 40px auto;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-            padding: 24px 28px 32px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
         }
-
+        .card {
+            background: #f7f9fc;
+            border-radius: 18px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+            padding: 28px 32px 32px;
+        }
         h1 {
-            font-size: 24px;
-            margin-top: 0;
-            margin-bottom: 8px;
+            margin: 0 0 8px;
+            font-size: 26px;
+            text-align: center;
         }
-
         .subtitle {
-            color: #6c757d;
-            margin-bottom: 24px;
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 20px;
         }
-
-        .controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        button {
-            background: #007bff;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            padding: 10px 18px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.05s;
-        }
-
-        button:hover {
-            background: #0069d9;
-        }
-
-        button:active {
-            transform: translateY(1px);
-        }
-
-        .badge {
+        .run-btn {
             display: inline-flex;
             align-items: center;
-            padding: 4px 10px;
+            justify-content: center;
+            border: none;
             border-radius: 999px;
-            font-size: 12px;
+            padding: 10px 22px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            color: #fff;
             font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 12px 30px rgba(79, 70, 229, 0.45);
+            transition: transform 0.1s ease-out, box-shadow 0.1s ease-out, filter 0.1s ease-out;
+            font-size: 15px;
         }
-
-        .badge-success {
-            background: #d4edda;
-            color: #155724;
+        .run-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 16px 40px rgba(79, 70, 229, 0.55);
         }
-
-        .badge-danger {
-            background: #f8d7da;
-            color: #721c24;
+        .run-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 8px 22px rgba(79, 70, 229, 0.4);
         }
-
-        .badge-warning {
-            background: #fff3cd;
-            color: #856404;
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
         }
-
-        .summary {
+        .stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
         }
-
-        .summary-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px 14px;
+        .stat-card {
+            padding: 14px 12px;
+            border-radius: 14px;
+            text-align: center;
+            color: #fff;
+            font-size: 13px;
         }
-
-        .summary-label {
-            font-size: 12px;
-            color: #6c757d;
+        .stat-label {
+            opacity: 0.9;
             margin-bottom: 4px;
         }
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .stat-all { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+        .stat-pass { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        .stat-fail { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .stat-error { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        .stat-skip { background: linear-gradient(135deg, #9ca3af, #6b7280); }
 
-        .summary-value {
-            font-size: 18px;
-            font-weight: 600;
+        .alert {
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+        .alert-success {
+            background: #e0fbe5;
+            border: 1px solid #4ade80;
+            color: #14532d;
+        }
+        .alert-error {
+            background: #fee2e2;
+            border: 1px solid #f87171;
+            color: #7f1d1d;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            border-radius: 8px;
+        .groups {
+            margin-top: 8px;
+            background: #eef2ff;
+            border-radius: 14px;
+            padding: 10px 10px 4px;
+        }
+        .group {
+            margin-bottom: 10px;
+            background: #f9fafb;
+            border-radius: 12px;
             overflow: hidden;
-            font-size: 13px;
         }
-
-        th, td {
-            padding: 8px 10px;
-            text-align: left;
-        }
-
-        th {
-            background: #f1f3f5;
+        .group-header {
+            padding: 8px 14px;
             font-weight: 600;
-            border-bottom: 1px solid #dee2e6;
+            font-size: 14px;
+            background: #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-
-        tr:nth-child(even) td {
-            background: #fafbfc;
-        }
-
-        .status-cell {
-            font-weight: 600;
-        }
-
-        .status-success {
-            color: #155724;
-        }
-
-        .status-failure,
-        .status-error {
-            color: #721c24;
-        }
-
-        .status-skipped {
-            color: #856404;
-        }
-
-        .raw-output {
-            margin-top: 24px;
-            background: #0b1020;
-            color: #e5e9f0;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        .group-meta {
             font-size: 12px;
-            max-height: 260px;
-            overflow: auto;
+            color: #4b5563;
         }
-
-        .error {
-            margin-bottom: 16px;
-            padding: 10px 12px;
-            background: #f8d7da;
-            color: #721c24;
-            border-radius: 6px;
+        .group-body {
+            padding: 6px 0;
+        }
+        .test-row {
+            display: flex;
+            align-items: center;
+            padding: 6px 14px;
             font-size: 13px;
+        }
+        .test-row:nth-child(odd) {
+            background: #f9fafb;
+        }
+        .test-row:nth-child(even) {
+            background: #f3f4f6;
+        }
+        .test-name {
+            flex: 1 1 auto;
+        }
+        .test-status {
+            margin-left: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .status-passed {
+            background: #bbf7d0;
+            color: #166534;
+        }
+        .status-failed {
+            background: #fed7aa;
+            color: #9a3412;
+        }
+        .status-error {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+        .status-skipped {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .footer-link {
+            font-size: 13px;
+            margin-top: 14px;
+        }
+        .footer-link a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+        .footer-link a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .card { padding: 20px 16px 22px; }
+            .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>Тестирование форм аутентификации</h1>
-    <div class="subtitle">
-        Запуск автоматических тестов для форм регистрации, входа и восстановления пароля.
+    <div class="page">
+        <div class="card">
+            <h1>Результаты тестов аутентификации</h1>
+            <div class="subtitle">Регистрация, вход и восстановление пароля</div>
+
+            <div class="toolbar">
+                <form method="get">
+                    <input type="hidden" name="run" value="1">
+                    <button class="run-btn" type="submit">Запустить тесты</button>
+                </form>
+            </div>
+
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-error">
+                    <?= $error ?>
+                </div>
+            <?php elseif ($results): ?>
+                <div class="alert alert-success">
+                    Тесты выполнены. Время: <strong><?= number_format($duration, 3) ?> сек</strong>.
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-card stat-all">
+                        <div class="stat-label">Всего тестов</div>
+                        <div class="stat-value"><?= $results['total'] ?></div>
+                    </div>
+                    <div class="stat-card stat-pass">
+                        <div class="stat-label">Пройдено</div>
+                        <div class="stat-value"><?= $results['passed'] ?></div>
+                    </div>
+                    <div class="stat-card stat-fail">
+                        <div class="stat-label">Провалено</div>
+                        <div class="stat-value"><?= $results['failed'] ?></div>
+                    </div>
+                    <div class="stat-card stat-error">
+                        <div class="stat-label">Ошибок</div>
+                        <div class="stat-value"><?= $results['errors'] ?></div>
+                    </div>
+                    <div class="stat-card stat-skip">
+                        <div class="stat-label">Пропущено</div>
+                        <div class="stat-value"><?= $results['skipped'] ?></div>
+                    </div>
+                </div>
+
+                <?php
+                $groups = [];
+                foreach ($results['tests'] as $test) {
+                    $groups[$test['group']][] = $test;
+                }
+
+                $groupStats = [];
+                foreach ($groups as $groupName => $tests) {
+                    $count = count($tests);
+                    $time  = 0.0;
+                    foreach ($tests as $t) {
+                        if ($t['time'] !== null) {
+                            $time += (float)$t['time'];
+                        }
+                    }
+                    $groupStats[$groupName] = ['count' => $count, 'time' => $time];
+                }
+                ?>
+
+                <div class="groups">
+                    <?php foreach ($groups as $groupName => $tests): ?>
+                        <div class="group">
+                            <div class="group-header">
+                                <span><?= htmlspecialchars($groupName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
+                                <span class="group-meta">
+                                    Тестов: <?= $groupStats[$groupName]['count'] ?>
+                                    | Время: <?= number_format($groupStats[$groupName]['time'], 3) ?>c
+                                </span>
+                            </div>
+                            <div class="group-body">
+                                <?php foreach ($tests as $test): ?>
+                                    <div class="test-row">
+                                        <div class="test-name">
+                                            <?= htmlspecialchars($test['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>
+                                        </div>
+                                        <div class="test-status <?= statusClass($test['status']) ?>">
+                                            <?php
+                                            switch ($test['status']) {
+                                                case 'passed': echo '✓ пройден'; break;
+                                                case 'failed': echo '✕ провален'; break;
+                                                case 'error':  echo '⚠ ошибка'; break;
+                                                case 'skipped':default: echo '⏳ пропущен'; break;
+                                            }
+                                            if (isset($test['time']) && $test['time'] !== null) {
+                                                echo ' · ' . number_format((float)$test['time'], 3) . ' c';
+                                            }
+                                            ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="alert alert-success">
+                    Нажмите кнопку «Запустить тесты», чтобы выполнить автоматические проверки форм аутентификации.
+                </div>
+            <?php endif; ?>
+
+            <div class="footer-link">
+                ← <a href="./">Вернуться на главную (если интегрировано в основной проект)</a>
+            </div>
+        </div>
     </div>
-
-    <form method="post" class="controls">
-        <button type="submit">Запустить тесты</button>
-        <?php if ($results): ?>
-            <?php
-            $failedCount = $results['failures'] + $results['errors'];
-            $allOk = $failedCount === 0 && $results['tests'] > 0;
-            ?>
-            <span class="badge <?= $allOk ? 'badge-success' : 'badge-danger' ?>">
-                <?= $allOk ? 'Все тесты успешно пройдены' : 'Есть ошибки в тестах' ?>
-            </span>
-        <?php elseif ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
-            <span class="badge badge-warning">Нет данных о тестах</span>
-        <?php endif; ?>
-    </form>
-
-    <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
-    <?php endif; ?>
-
-    <?php if ($results): ?>
-        <div class="summary">
-            <div class="summary-item">
-                <div class="summary-label">Всего тестов</div>
-                <div class="summary-value"><?= $results['tests'] ?></div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Ошибки и падения</div>
-                <div class="summary-value"><?= $results['failures'] + $results['errors'] ?></div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Пропущенные тесты</div>
-                <div class="summary-value"><?= $results['skipped'] ?></div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Общее время</div>
-                <div class="summary-value"><?= number_format($results['time'], 3, '.', ' ') ?> с</div>
-            </div>
-        </div>
-
-        <table>
-            <thead>
-            <tr>
-                <th>Класс</th>
-                <th>Тест</th>
-                <th>Статус</th>
-                <th>Время, c</th>
-                <th>Сообщение</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($results['cases'] as $case): ?>
-                <?php $bg = statusColor($case['status']); ?>
-                <tr style="background-color: <?= $bg ?>">
-                    <td><?= htmlspecialchars($case['class'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
-                    <td><?= htmlspecialchars($case['name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
-                    <td class="status-cell status-<?= htmlspecialchars($case['status'], ENT_QUOTES, 'UTF-8') ?>">
-                        <?php
-                        echo match ($case['status']) {
-                            'success' => 'Успешно',
-                            'failure' => 'Провалено',
-                            'error'   => 'Ошибка',
-                            'skipped' => 'Пропущено',
-                            default   => 'Неизвестно',
-                        };
-                        ?>
-                    </td>
-                    <td><?= number_format($case['time'], 3, '.', ' ') ?></td>
-                    <td><?= htmlspecialchars($case['message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
-
-    <?php if ($rawOutput): ?>
-        <div class="raw-output">
-            <?php foreach ($rawOutput as $line): ?>
-                <?= htmlspecialchars($line, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?><br>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
-</div>
 </body>
 </html>
-
-
-
-

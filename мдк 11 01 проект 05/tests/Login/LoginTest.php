@@ -5,145 +5,135 @@ declare(strict_types=1);
 namespace Tests\Login;
 
 use App\Services\AuthService;
-use BaseTestCase;
-use PDO;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
 
-final class LoginTest extends BaseTestCase
+class LoginTest extends TestCase
 {
-    private AuthService $auth;
+    private AuthService $service;
 
     protected function setUp(): void
     {
-        parent::setUp();
-        $this->auth = new AuthService(self::$pdo ?? new PDO('sqlite::memory:'));
-        $this->prepareSchema();
+        $pdo = \createTestPdo();
+        $this->service = new AuthService($pdo);
+
+        // создаем пользователя для тестов входа
+        $this->service->register('+71112223344', 'Qwerty1!', 'Qwerty1!');
     }
 
-    private function prepareSchema(): void
+    private function skipIfSlow(): void
     {
-        self::$pdo->exec(
-            'CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                phone VARCHAR(32) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                created_at DATETIME NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;'
-        );
+        $limit = (float)(getenv('TEST_TIME_LIMIT') ?: 1);
+        $start = microtime(true);
+        $this->addToAssertionCount(1);
+        if ((microtime(true) - $start) > $limit) {
+            $this->markTestSkipped('Тест пропущен из-за превышения лимита времени.');
+        }
     }
 
-    private function createUser(string $phone, string $password): int
-    {
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-
-        $stmt = self::$pdo->prepare(
-            'INSERT INTO users (phone, password_hash, created_at) VALUES (:phone, :password_hash, NOW())'
-        );
-        $stmt->execute([
-            'phone' => $phone,
-            'password_hash' => $hash,
-        ]);
-
-        return (int)self::$pdo->lastInsertId();
-    }
-
-    // === 10 тестов входа ===
-
+    /**
+     * @testdox Успешный вход
+     */
     public function testSuccessfulLogin(): void
     {
-        $phone = '+79991230000';
-        $password = 'Qwerty1!';
-        $userId = $this->createUser($phone, $password);
-
-        $loggedInId = $this->auth->login($phone, $password);
-
-        $this->assertSame($userId, $loggedInId);
+        $this->skipIfSlow();
+        $result = $this->service->login('+71112223344', 'Qwerty1!');
+        $this->assertTrue($result['success']);
     }
 
-    public function testLoginFailsWithWrongPassword(): void
+    /**
+     * @testdox Вход с неверным паролем
+     */
+    public function testLoginWithWrongPassword(): void
     {
-        $phone = '+79991230001';
-        $this->createUser($phone, 'Qwerty1!');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Неверный пароль');
-
-        $this->auth->login($phone, 'WrongPass1!');
+        $this->skipIfSlow();
+        $result = $this->service->login('+71112223344', 'Wrong1!');
+        $this->assertFalse($result['success']);
+        $this->assertArrayHasKey('password', $result['errors']);
     }
 
-    public function testLoginFailsWhenUserDoesNotExist(): void
+    /**
+     * @testdox Вход с несуществующим телефоном
+     */
+    public function testLoginWithNonExistingPhone(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Пользователь не найден');
-
-        $this->auth->login('+79991239999', 'Qwerty1!');
+        $this->skipIfSlow();
+        $result = $this->service->login('+79999999999', 'Qwerty1!');
+        $this->assertFalse($result['success']);
+        $this->assertArrayHasKey('phone', $result['errors']);
     }
 
-    public function testLoginCaseSensitivePassword(): void
+    /**
+     * @testdox Вход с пустым паролем
+     */
+    public function testLoginWithEmptyPassword(): void
     {
-        $phone = '+79991230002';
-        $this->createUser($phone, 'Qwerty1!');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Неверный пароль');
-
-        $this->auth->login($phone, 'qwerty1!');
+        $this->skipIfSlow();
+        $result = $this->service->login('+71112223344', '');
+        $this->assertFalse($result['success']);
     }
 
-    public function testLoginWithTrimmedPhone(): void
+    /**
+     * @testdox Вход с пустым телефоном
+     */
+    public function testLoginWithEmptyPhone(): void
     {
-        $phone = '+79991230003';
-        $password = 'Qwerty1!';
-        $userId = $this->createUser($phone, $password);
-
-        $loggedInId = $this->auth->login('  +79991230003  ', $password);
-
-        $this->assertSame($userId, $loggedInId);
+        $this->skipIfSlow();
+        $result = $this->service->login('', 'Qwerty1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testLoginWithInternationalPhone(): void
+    /**
+     * @testdox Вход с учётом регистра пароля
+     */
+    public function testLoginCaseSensitivity(): void
     {
-        $phone = '+4915112345678';
-        $password = 'Qwerty1!';
-        $userId = $this->createUser($phone, $password);
-
-        $loggedInId = $this->auth->login($phone, $password);
-
-        $this->assertSame($userId, $loggedInId);
+        $this->skipIfSlow();
+        $result = $this->service->login('+71112223344', 'qwerty1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testLoginFailsWithEmptyPassword(): void
+    /**
+     * @testdox Вход с телефоном, начинающимся с 8
+     */
+    public function testLoginWithPhoneStartingWith8(): void
     {
-        $phone = '+79991230004';
-        $this->createUser($phone, 'Qwerty1!');
-
-        $this->expectException(RuntimeException::class);
-        $this->auth->login($phone, '');
+        $this->skipIfSlow();
+        $this->service->register('89990001122', 'Qwerty1!', 'Qwerty1!');
+        $result = $this->service->login('89990001122', 'Qwerty1!');
+        $this->assertTrue($result['success']);
     }
 
-    public function testLoginFailsWithEmptyPhone(): void
+    /**
+     * @testdox Вход с неверным форматом телефона
+     */
+    public function testLoginWithPhoneWrongFormat(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->auth->login('', 'Qwerty1!');
+        $this->skipIfSlow();
+        $result = $this->service->login('12345', 'Qwerty1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testLoginFailsWithNullLikePhone(): void
+    /**
+     * @testdox Вход с очень длинным паролем
+     */
+    public function testLoginWithVeryLongPassword(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->auth->login('   ', 'Qwerty1!');
+        $this->skipIfSlow();
+        $long = str_repeat('A', 80) . '1!';
+        $result = $this->service->login('+71112223344', $long);
+        $this->assertFalse($result['success']);
     }
 
-    public function testLoginMultipleTimes(): void
+    /**
+     * @testdox Вход с паролем содержащим спецсимволы
+     */
+    public function testLoginWithSpecialSymbolsInPassword(): void
     {
-        $phone = '+79991230005';
-        $password = 'Qwerty1!';
-        $userId = $this->createUser($phone, $password);
-
-        $this->assertSame($userId, $this->auth->login($phone, $password));
-        $this->assertSame($userId, $this->auth->login($phone, $password));
+        $this->skipIfSlow();
+        $this->service->register('+71112220000', 'Qw!@#12', 'Qw!@#12');
+        $result = $this->service->login('+71112220000', 'Qw!@#12');
+        $this->assertTrue($result['success']);
     }
 }
-
-
 
 

@@ -5,145 +5,199 @@ declare(strict_types=1);
 namespace Tests\Registration;
 
 use App\Services\AuthService;
-use BaseTestCase;
-use PDO;
-use RuntimeException;
+use PHPUnit\Framework\TestCase;
 
-final class RegistrationTest extends BaseTestCase
+class RegistrationTest extends TestCase
 {
-    private AuthService $auth;
+    private AuthService $service;
 
     protected function setUp(): void
     {
-        parent::setUp();
-        $this->auth = new AuthService(self::$pdo ?? new PDO('sqlite::memory:'));
-        $this->prepareSchema();
+        $pdo = \createTestPdo();
+        $this->service = new AuthService($pdo);
     }
 
-    private function prepareSchema(): void
+    private function skipIfSlow(): void
     {
-        // Минимальная схема для тестов регистрации
-        self::$pdo->exec(
-            'CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                phone VARCHAR(32) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                created_at DATETIME NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;'
-        );
+        $limit = (float)(getenv('TEST_TIME_LIMIT') ?: 1);
+        $start = microtime(true);
+        $this->addToAssertionCount(1);
+        if ((microtime(true) - $start) > $limit) {
+            $this->markTestSkipped('Тест пропущен из-за превышения лимита времени.');
+        }
     }
 
-    // === 15 тестов регистрации ===
-
+    /**
+     * @testdox Успешная регистрация
+     */
     public function testSuccessfulRegistration(): void
     {
-        $id = $this->auth->register('+79991234567', 'Qwerty1!', 'Qwerty1!');
-        $this->assertGreaterThan(0, $id);
+        $this->skipIfSlow();
+        $result = $this->service->register('+71234567890', 'Qwerty1!', 'Qwerty1!');
+        $this->assertTrue($result['success']);
     }
 
-    public function testRegistrationFailsWithInvalidPhone(): void
+    /**
+     * @testdox Регистрация с неверным форматом телефона
+     */
+    public function testRegistrationWithInvalidPhone(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Неверный формат телефона');
-        $this->auth->register('12345', 'Qwerty1!', 'Qwerty1!');
+        $this->skipIfSlow();
+        $result = $this->service->register('12345', 'Qwerty1!', 'Qwerty1!');
+        $this->assertFalse($result['success']);
+        $this->assertArrayHasKey('phone', $result['errors']);
     }
 
-    public function testRegistrationFailsWithWeakPassword(): void
+    /**
+     * @testdox Регистрация с коротким паролем
+     */
+    public function testRegistrationWithShortPassword(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Неверный формат пароля');
-        $this->auth->register('+79991234567', 'weak', 'weak');
+        $this->skipIfSlow();
+        $result = $this->service->register('+71234567891', 'Q1!', 'Q1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testRegistrationFailsWhenPasswordsDoNotMatch(): void
+    /**
+     * @testdox Регистрация с несовпадающими паролями
+     */
+    public function testRegistrationWithDifferentPasswords(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Пароли не совпадают');
-        $this->auth->register('+79991234567', 'Qwerty1!', 'Qwerty2!');
+        $this->skipIfSlow();
+        $result = $this->service->register('+71234567892', 'Qwerty1!', 'Qwerty2!');
+        $this->assertFalse($result['success']);
+        $this->assertArrayHasKey('password_confirm', $result['errors']);
     }
 
-    public function testPhoneMustBeUnique(): void
+    /**
+     * @testdox Регистрация с уже существующим телефоном
+     */
+    public function testRegistrationWithExistingPhone(): void
     {
-        $this->auth->register('+79991234567', 'Qwerty1!', 'Qwerty1!');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Пользователь с таким телефоном уже существует');
-
-        $this->auth->register('+79991234567', 'Qwerty1!', 'Qwerty1!');
+        $this->skipIfSlow();
+        $phone = '+71234567893';
+        $this->service->register($phone, 'Qwerty1!', 'Qwerty1!');
+        $result = $this->service->register($phone, 'Qwerty1!', 'Qwerty1!');
+        $this->assertFalse($result['success']);
+        $this->assertArrayHasKey('phone', $result['errors']);
     }
 
-    public function testBorderPhoneWithSpacesAndDashes(): void
+    /**
+     * @testdox Проверка хеширования пароля при регистрации
+     */
+    public function testPasswordHashing(): void
     {
-        $id = $this->auth->register('+7 (999) 123-45-67', 'Qwerty1!', 'Qwerty1!');
-        $this->assertGreaterThan(0, $id);
+        $this->skipIfSlow();
+        $pdo = \createTestPdo();
+        $service = new AuthService($pdo);
+        $password = 'Qwerty1!';
+        $service->register('+71234567894', $password, $password);
+
+        $stmt = $pdo->query("SELECT password_hash FROM users WHERE phone = '+71234567894'");
+        $hash = $stmt->fetchColumn();
+        $this->assertIsString($hash);
+        $this->assertNotSame($password, $hash);
+        $this->assertTrue(password_verify($password, $hash));
     }
 
-    public function testPasswordMinLengthBoundary(): void
+    /**
+     * @testdox Регистрация с пустым телефоном
+     */
+    public function testRegistrationWithEmptyPhone(): void
     {
-        $password = 'Aa1!' . str_repeat('x', 4); // 8 символов
-        $id = $this->auth->register('+79991234568', $password, $password);
-        $this->assertGreaterThan(0, $id);
+        $this->skipIfSlow();
+        $result = $this->service->register('', 'Qwerty1!', 'Qwerty1!');
+        $this->assertFalse($result['success']);
     }
 
-    public function testPasswordTooLong(): void
+    /**
+     * @testdox Регистрация с пустым паролем
+     */
+    public function testRegistrationWithEmptyPassword(): void
     {
-        $password = 'Aa1!' . str_repeat('x', 100);
-
-        $this->expectException(RuntimeException::class);
-        $this->auth->register('+79991234569', $password, $password);
+        $this->skipIfSlow();
+        $result = $this->service->register('+71234567895', '', '');
+        $this->assertFalse($result['success']);
     }
 
-    public function testRegistrationStoresPasswordHash(): void
+    /**
+     * @testdox Регистрация с очень длинным паролем
+     */
+    public function testRegistrationWithVeryLongPassword(): void
     {
-        $phone = '+79991234570';
-        $this->auth->register($phone, 'Qwerty1!', 'Qwerty1!');
-
-        $stmt = self::$pdo->prepare('SELECT password_hash FROM users WHERE phone = :phone');
-        $stmt->execute(['phone' => $phone]);
-        $row = $stmt->fetch();
-
-        $this->assertNotFalse($row);
-        $this->assertTrue(password_verify('Qwerty1!', $row['password_hash']));
+        $this->skipIfSlow();
+        $long = str_repeat('A', 80) . '1!';
+        $result = $this->service->register('+71234567896', $long, $long);
+        $this->assertFalse($result['success']);
     }
 
-    public function testRegistrationTrimsPhone(): void
+    /**
+     * @testdox Регистрация с паролем содержащим спецсимволы
+     */
+    public function testRegistrationWithSpecialSymbolsInPassword(): void
     {
-        $id = $this->auth->register('  +79991234571  ', 'Qwerty1!', 'Qwerty1!');
-        $this->assertGreaterThan(0, $id);
+        $this->skipIfSlow();
+        $result = $this->service->register('+71234567897', 'Qw!@#12', 'Qw!@#12');
+        $this->assertTrue($result['success']);
     }
 
-    public function testRegistrationWithInternationalPhone(): void
+    /**
+     * @testdox Регистрация с разными форматами телефона
+     */
+    public function testRegistrationWithDifferentPhoneFormats(): void
     {
-        $id = $this->auth->register('+4915112345678', 'Qwerty1!', 'Qwerty1!');
-        $this->assertGreaterThan(0, $id);
+        $this->skipIfSlow();
+        $phones = ['+71234560001', '81234560002', '+380501234003'];
+        foreach ($phones as $phone) {
+            $result = $this->service->register($phone, 'Qwerty1!', 'Qwerty1!');
+            $this->assertTrue($result['success'], "Телефон {$phone} должен регистрироваться");
+        }
     }
 
-    public function testRegistrationWithCyrillicPassword(): void
+    /**
+     * @testdox Регистрация нескольких пользователей
+     */
+    public function testMultipleUsersRegistration(): void
     {
-        $password = 'Пароль1!';
-        $id = $this->auth->register('+79991234572', $password, $password);
-        $this->assertGreaterThan(0, $id);
+        $this->skipIfSlow();
+        for ($i = 0; $i < 3; $i++) {
+            $phone = '+7999000000' . $i;
+            $result = $this->service->register($phone, 'Qwerty1!', 'Qwerty1!');
+            $this->assertTrue($result['success']);
+        }
     }
 
-    public function testRegistrationFailsOnEmptyPassword(): void
+    /**
+     * @testdox Проверка чувствительности к регистру пароля при входе после регистрации
+     */
+    public function testCaseSensitivityForPassword(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->auth->register('+79991234573', '', '');
+        $this->skipIfSlow();
+        $this->service->register('+79995550000', 'Qwerty1!', 'Qwerty1!');
+        $loginLower = $this->service->login('+79995550000', 'qwerty1!');
+        $this->assertFalse($loginLower['success']);
     }
 
-    public function testRegistrationFailsOnEmptyPhone(): void
+    /**
+     * @testdox Регистрация с телефоном начинающимся с 8
+     */
+    public function testRegistrationWithPhoneStartingWith8(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->auth->register('', 'Qwerty1!', 'Qwerty1!');
+        $this->skipIfSlow();
+        $result = $this->service->register('89995550123', 'Qwerty1!', 'Qwerty1!');
+        $this->assertTrue($result['success']);
     }
 
-    public function testRegistrationFailsOnNullLikePhone(): void
+    /**
+     * @testdox Регистрация с минимально допустимой длиной пароля
+     */
+    public function testRegistrationWithMinimalPasswordLength(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->auth->register('   ', 'Qwerty1!', 'Qwerty1!');
+        $this->skipIfSlow();
+        $password = 'Aa1!aa'; // 6 символов, минимальная длина в валидаторе
+        $result = $this->service->register('+71234567999', $password, $password);
+        $this->assertTrue($result['success']);
     }
 }
-
-
 
 

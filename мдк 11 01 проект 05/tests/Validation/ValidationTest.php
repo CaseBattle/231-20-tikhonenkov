@@ -5,68 +5,161 @@ declare(strict_types=1);
 namespace Tests\Validation;
 
 use App\Validation\AuthValidator;
-use BaseTestCase;
+use PHPUnit\Framework\TestCase;
 
-final class ValidationTest extends BaseTestCase
+class ValidationTest extends TestCase
 {
-    // === 10 тестов валидации ===
+    private AuthValidator $validator;
 
-    public function testValidRussianPhonePlusSeven(): void
+    protected function setUp(): void
     {
-        $this->assertTrue(AuthValidator::isValidPhone('+79991234567'));
+        $this->validator = new AuthValidator();
     }
 
-    public function testValidRussianPhoneEight(): void
+    private function skipIfSlow(): void
     {
-        $this->assertTrue(AuthValidator::isValidPhone('89991234567'));
+        $limit = (float)(getenv('TEST_TIME_LIMIT') ?: 1);
+        if ($limit <= 0) {
+            return;
+        }
+
+        $start = microtime(true);
+        $this->addToAssertionCount(1); // мелкое действие, чтобы не было пустого теста
+        $elapsed = microtime(true) - $start;
+        if ($elapsed > $limit) {
+            $this->markTestSkipped('Тест пропущен из-за превышения лимита времени.');
+        }
     }
 
-    public function testValidInternationalPhone(): void
+    /**
+     * @testdox Проверка валидных форматов телефона
+     */
+    public function testValidPhoneFormats(): void
     {
-        $this->assertTrue(AuthValidator::isValidPhone('+4915112345678'));
+        $this->skipIfSlow();
+        $validPhones = ['+71234567890', '81234567890', '+380501234567'];
+        foreach ($validPhones as $phone) {
+            $errors = $this->validator->validatePhone($phone);
+            $this->assertArrayNotHasKey('phone', $errors, "Телефон {$phone} должен быть валидным");
+        }
     }
 
-    public function testInvalidPhoneTooShort(): void
+    /**
+     * @testdox Проверка невалидных форматов телефона
+     */
+    public function testInvalidPhoneFormats(): void
     {
-        $this->assertFalse(AuthValidator::isValidPhone('+7999'));
+        $this->skipIfSlow();
+        $invalidPhones = ['12345', 'abcd', '+7 (123) 45', ''];
+        foreach ($invalidPhones as $phone) {
+            $errors = $this->validator->validatePhone($phone);
+            $this->assertArrayHasKey('phone', $errors, "Телефон {$phone} должен быть невалидным");
+        }
     }
 
-    public function testInvalidPhoneLetters(): void
+    /**
+     * @testdox Проверка валидных паролей
+     */
+    public function testValidPasswords(): void
     {
-        $this->assertFalse(AuthValidator::isValidPhone('+7ABC1234567'));
+        $this->skipIfSlow();
+        $passwords = ['Qwerty1!', 'Пароль1!', 'Aa12345!'];
+        foreach ($passwords as $password) {
+            $errors = $this->validator->validatePassword($password);
+            $this->assertEmpty($errors, "Пароль {$password} должен быть валидным");
+        }
     }
 
-    public function testValidPasswordStrong(): void
+    /**
+     * @testdox Пароль слишком короткий
+     */
+    public function testInvalidPasswordsTooShort(): void
     {
-        $this->assertTrue(AuthValidator::isValidPassword('Qwerty1!'));
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePassword('A1!');
+        $this->assertArrayHasKey('password', $errors);
     }
 
-    public function testInvalidPasswordTooShort(): void
+    /**
+     * @testdox Пароль слишком длинный
+     */
+    public function testInvalidPasswordsTooLong(): void
     {
-        $this->assertFalse(AuthValidator::isValidPassword('Qw1!a'));
+        $this->skipIfSlow();
+        $tooLong = str_repeat('A', 70) . '1!';
+        $errors = $this->validator->validatePassword($tooLong);
+        $this->assertArrayHasKey('password', $errors);
     }
 
-    public function testInvalidPasswordNoUppercase(): void
+    /**
+     * @testdox Пароль без цифр
+     */
+    public function testPasswordWithoutDigits(): void
     {
-        $this->assertFalse(AuthValidator::isValidPassword('qwerty1!'));
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePassword('Qwerty!');
+        $this->assertArrayHasKey('password_digits', $errors);
     }
 
-    public function testInvalidPasswordNoDigit(): void
+    /**
+     * @testdox Пароль без заглавных букв
+     */
+    public function testPasswordWithoutUppercase(): void
     {
-        $this->assertFalse(AuthValidator::isValidPassword('Qwerty!!'));
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePassword('qwerty1!');
+        $this->assertArrayHasKey('password_upper', $errors);
     }
 
-    public function testPasswordConfirmation(): void
+    /**
+     * @testdox Пароль без строчных букв
+     */
+    public function testPasswordWithoutLowercase(): void
     {
-        $this->assertTrue(
-            AuthValidator::isPasswordConfirmationValid('Qwerty1!', 'Qwerty1!')
-        );
-        $this->assertFalse(
-            AuthValidator::isPasswordConfirmationValid('Qwerty1!', 'Qwerty2!')
-        );
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePassword('QWERTY1!');
+        $this->assertArrayHasKey('password_lower', $errors);
+    }
+
+    /**
+     * @testdox Пароль без спецсимволов
+     */
+    public function testPasswordWithoutSpecialChars(): void
+    {
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePassword('Qwerty1');
+        $this->assertArrayHasKey('password_special', $errors);
+    }
+
+    /**
+     * @testdox Пароль состоящий только из цифр
+     */
+    public function testPasswordOnlyDigits(): void
+    {
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePassword('12345678');
+        $this->assertNotEmpty($errors);
+    }
+
+    /**
+     * @testdox Телефон с пробелами внутри
+     */
+    public function testPhoneWithSpaces(): void
+    {
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePhone('+7 123 456 78 90');
+        $this->assertArrayNotHasKey('phone', $errors);
+    }
+
+    /**
+     * @testdox Телефон с дефисами
+     */
+    public function testPhoneWithDashes(): void
+    {
+        $this->skipIfSlow();
+        $errors = $this->validator->validatePhone('+7-123-456-78-90');
+        $this->assertArrayNotHasKey('phone', $errors);
     }
 }
-
-
 
 

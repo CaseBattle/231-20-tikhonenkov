@@ -119,23 +119,32 @@ vendor\bin\phpunit --configuration phpunit.xml
 
 1. **Запустите локальный веб-сервер:**
 
-   **Вариант А: Встроенный сервер PHP (рекомендуется)**
+   **Вариант А: Запуск через npm (рекомендуется для разработки)**
+   ```bash
+   npm start
+   ```
+
+   Сервер будет доступен по адресу `http://localhost:8000/`.
+
+   **Вариант Б: Встроенный сервер PHP**
    ```bash
    php -S localhost:8000
    ```
 
-   **Вариант Б: XAMPP/OpenServer**
+   **Вариант В: XAMPP/OpenServer**
    - Скопируйте папку проекта в `htdocs` (XAMPP) или `domains` (OpenServer)
    - Запустите Apache через панель управления
 
 2. **Откройте в браузере:**
-   ```
-   http://localhost:8000/test_results.php
-   ```
-   или
-   ```
-   http://localhost/мдк 11 01 проект 05/test_results.php
-   ```
+   - если вы запустили сервер через `npm start` или `php -S localhost:8000`:
+     ```text
+     http://localhost:8000/
+     ```
+     (произойдёт переадресация на `test_results.php`);
+   - если используете XAMPP/OpenServer:
+     ```text
+     http://localhost/мдк 11 01 проект 05/test_results.php
+     ```
 
 3. **Нажмите кнопку "Запустить тесты"**
 

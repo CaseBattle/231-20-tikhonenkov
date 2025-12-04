@@ -30,15 +30,14 @@
 
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Подключение к тестовой БД.
+             По умолчанию настроено на локальный MySQL с пользователем root БЕЗ пароля,
+             как это обычно бывает в XAMPP/OpenServer на учебных ПК. -->
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="3306"/>
         <env name="DB_NAME" value="auth_project_test"/>
         <env name="DB_USER" value="root"/>
-        <env name="DB_PASSWORD" value="qweqweqwe"/>
+        <env name="DB_PASSWORD" value="123123"/>
         <env name="TEST_MAX_DURATION" value="2.0"/>
     </php>
 </phpunit>
-
-
-
-

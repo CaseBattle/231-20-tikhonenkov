@@ -1,204 +1,173 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Services;
 
 use App\Validation\AuthValidator;
 use PDO;
-use RuntimeException;
 
 /**
- * Упрощённый сервис аутентификации для тестов.
- *
- * В реальном проекте вы можете заменить этот класс своим сервисом
- * из проекта «мдк 11 01 проект 03», а тесты адаптировать под него.
+ * Класс, имитирующий систему аутентификации.
+ * В продакшн-проекте вместо SQLite может использоваться любая БД.
  */
 class AuthService
 {
-    public function __construct(
-        private PDO $pdo
-    ) {
+    private PDO $pdo;
+    private AuthValidator $validator;
+
+    public function __construct(PDO $pdo, ?AuthValidator $validator = null)
+    {
+        $this->pdo = $pdo;
+        $this->validator = $validator ?? new AuthValidator();
     }
 
     /**
-     * Регистрация пользователя.
-     *
-     * @throws RuntimeException при ошибках валидации или уникальности телефона
+     * Регистрация нового пользователя.
      */
-    public function register(string $phone, string $password, string $passwordConfirmation): int
+    public function register(string $phone, string $password, string $passwordConfirm): array
     {
-        // Обрезаем пробелы в телефоне
-        $phone = trim($phone);
-        
-        if (!AuthValidator::isValidPhone($phone)) {
-            throw new RuntimeException('Неверный формат телефона');
+        $errors = $this->validator->validateRegistration($phone, $password, $passwordConfirm);
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
         }
 
-        if (!AuthValidator::isValidPassword($password)) {
-            throw new RuntimeException('Неверный формат пароля');
-        }
-
-        if (!AuthValidator::isPasswordConfirmationValid($password, $passwordConfirmation)) {
-            throw new RuntimeException('Пароли не совпадают');
-        }
-
-        // Проверяем уникальность телефона
-        $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = :phone LIMIT 1');
+        // Проверка уникальности телефона
+        $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = :phone');
         $stmt->execute(['phone' => $phone]);
         if ($stmt->fetch()) {
-            throw new RuntimeException('Пользователь с таким телефоном уже существует');
+            return ['success' => false, 'errors' => ['phone' => 'Пользователь с таким телефоном уже существует']];
         }
 
-        $hash = password_hash($password, PASSWORD_DEFAULT);
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $stmt = $this->pdo->prepare('INSERT INTO users (phone, password_hash) VALUES (:phone, :hash)');
+        $stmt->execute(['phone' => $phone, 'hash' => $hash]);
 
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO users (phone, password_hash, created_at) VALUES (:phone, :password_hash, NOW())'
-        );
-        $stmt->execute([
-            'phone' => $phone,
-            'password_hash' => $hash,
-        ]);
-
-        return (int)$this->pdo->lastInsertId();
+        return ['success' => true, 'errors' => []];
     }
 
     /**
-     * Аутентификация по телефону и паролю.
-     *
-     * Возвращает ID пользователя при успехе.
-     *
-     * @throws RuntimeException при ошибках
+     * Вход пользователя.
      */
-    public function login(string $phone, string $password): int
+    public function login(string $phone, string $password): array
     {
-        // Обрезаем пробелы в телефоне
-        $phone = trim($phone);
-        
-        $stmt = $this->pdo->prepare('SELECT id, password_hash FROM users WHERE phone = :phone LIMIT 1');
-        $stmt->execute(['phone' => $phone]);
-
-        $row = $stmt->fetch();
-        if (!$row) {
-            throw new RuntimeException('Пользователь не найден');
+        $errors = $this->validator->validateLogin($phone, $password);
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
         }
 
-        // Проверяем чувствительность к регистру
-        if (!password_verify($password, $row['password_hash'])) {
-            throw new RuntimeException('Неверный пароль');
-        }
-
-        return (int)$row['id'];
-    }
-
-    /**
-     * Инициация восстановления пароля.
-     *
-     * Генерирует и сохраняет код в таблицу password_resets.
-     *
-     * @return string Сгенерированный код
-     */
-    public function generateResetCode(string $phone, \DateInterval $ttl): string
-    {
-        // Обрезаем пробелы в телефоне
-        $phone = trim($phone);
-        
-        $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = :phone LIMIT 1');
+        $stmt = $this->pdo->prepare('SELECT id, password_hash FROM users WHERE phone = :phone');
         $stmt->execute(['phone' => $phone]);
-        $user = $stmt->fetch();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user) {
-            throw new RuntimeException('Пользователь не найден');
+            return ['success' => false, 'errors' => ['phone' => 'Пользователь не найден']];
+        }
+
+        if (!password_verify($password, $user['password_hash'])) {
+            return ['success' => false, 'errors' => ['password' => 'Неверный пароль']];
+        }
+
+        return ['success' => true, 'errors' => []];
+    }
+
+    /**
+     * Запрос кода восстановления пароля.
+     */
+    public function requestPasswordReset(string $phone): array
+    {
+        $errors = $this->validator->validatePhone($phone);
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => ['phone' => $errors['phone'] ?? 'Некорректный телефон']];
+        }
+
+        $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = :phone');
+        $stmt->execute(['phone' => $phone]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return ['success' => false, 'errors' => ['phone' => 'Пользователь не найден']];
         }
 
         $code = random_int(100000, 999999);
+        $expiresAt = time() + 300; // 5 минут
 
-        $expiresAt = (new \DateTimeImmutable('now'))
-            ->add($ttl)
-            ->format('Y-m-d H:i:s');
+        // Удаляем старые коды
+        $delete = $this->pdo->prepare('DELETE FROM password_resets WHERE user_id = :user_id');
+        $delete->execute(['user_id' => $user['id']]);
 
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO password_resets (user_id, code, expires_at, created_at) 
-             VALUES (:user_id, :code, :expires_at, NOW())'
+        $insert = $this->pdo->prepare(
+            'INSERT INTO password_resets (user_id, code, expires_at, attempts) VALUES (:user_id, :code, :expires_at, 0)'
         );
-        $stmt->execute([
+        $insert->execute([
             'user_id' => $user['id'],
             'code' => (string)$code,
             'expires_at' => $expiresAt,
         ]);
 
-        return (string)$code;
+        return ['success' => true, 'code' => (string)$code];
     }
 
     /**
-     * Сброс пароля по коду.
+     * Сброс пароля по коду восстановления.
      */
-    public function resetPassword(string $phone, string $code, string $newPassword, string $newPasswordConfirmation): void
+    public function resetPassword(string $phone, string $code, string $password, string $passwordConfirm): array
     {
-        // Обрезаем пробелы в телефоне
-        $phone = trim($phone);
-        
-        if (!AuthValidator::isValidPassword($newPassword)) {
-            throw new RuntimeException('Неверный формат нового пароля');
+        $errors = $this->validator->validatePasswordReset($password, $passwordConfirm);
+        if (!empty($errors)) {
+            return ['success' => false, 'errors' => $errors];
         }
 
-        if (!AuthValidator::isPasswordConfirmationValid($newPassword, $newPasswordConfirmation)) {
-            throw new RuntimeException('Пароли не совпадают');
+        $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = :phone');
+        $stmt->execute(['phone' => $phone]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return ['success' => false, 'errors' => ['phone' => 'Пользователь не найден']];
         }
 
-        $this->pdo->beginTransaction();
+        $resetStmt = $this->pdo->prepare(
+            'SELECT id, code, expires_at, attempts FROM password_resets WHERE user_id = :user_id'
+        );
+        $resetStmt->execute(['user_id' => $user['id']]);
+        $reset = $resetStmt->fetch(PDO::FETCH_ASSOC);
 
-        try {
-            $stmt = $this->pdo->prepare('SELECT id FROM users WHERE phone = :phone LIMIT 1');
-            $stmt->execute(['phone' => $phone]);
-            $user = $stmt->fetch();
+        if (!$reset) {
+            return ['success' => false, 'errors' => ['code' => 'Код восстановления не запрошен']];
+        }
 
-            if (!$user) {
-                throw new RuntimeException('Пользователь не найден');
-            }
+        // Лимит попыток
+        if ((int)$reset['attempts'] >= 5) {
+            return ['success' => false, 'errors' => ['code' => 'Превышено количество попыток']];
+        }
 
-            $stmt = $this->pdo->prepare(
-                'SELECT id, code, expires_at 
-                 FROM password_resets 
-                 WHERE user_id = :user_id 
-                 ORDER BY id DESC 
-                 LIMIT 1'
+        // Проверка времени действия
+        if ((int)$reset['expires_at'] < time()) {
+            return ['success' => false, 'errors' => ['code' => 'Срок действия кода истёк']];
+        }
+
+        // Проверка кода
+        if ($reset['code'] !== $code) {
+            $update = $this->pdo->prepare(
+                'UPDATE password_resets SET attempts = attempts + 1 WHERE id = :id'
             );
-            $stmt->execute(['user_id' => $user['id']]);
-            $reset = $stmt->fetch();
+            $update->execute(['id' => $reset['id']]);
 
-            if (!$reset) {
-                throw new RuntimeException('Код восстановления не найден');
-            }
-
-            if (!hash_equals($reset['code'], $code)) {
-                throw new RuntimeException('Неверный код восстановления');
-            }
-
-            $now = new \DateTimeImmutable('now');
-            $expiresAt = new \DateTimeImmutable($reset['expires_at']);
-
-            if ($now > $expiresAt) {
-                throw new RuntimeException('Срок действия кода истёк');
-            }
-
-            $hash = password_hash($newPassword, PASSWORD_DEFAULT);
-
-            $stmt = $this->pdo->prepare(
-                'UPDATE users SET password_hash = :password_hash WHERE id = :id'
-            );
-            $stmt->execute([
-                'password_hash' => $hash,
-                'id' => $user['id'],
-            ]);
-
-            $this->pdo->commit();
-        } catch (\Throwable $e) {
-            $this->pdo->rollBack();
-            throw $e;
+            return ['success' => false, 'errors' => ['code' => 'Неверный код']];
         }
+
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $updateUser = $this->pdo->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+        $updateUser->execute(['hash' => $hash, 'id' => $user['id']]);
+
+        // Удаляем использованный код
+        $delete = $this->pdo->prepare('DELETE FROM password_resets WHERE id = :id');
+        $delete->execute(['id' => $reset['id']]);
+
+        return ['success' => true, 'errors' => []];
     }
 }
+
+
+
 
 
 

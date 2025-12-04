@@ -1,0 +1,12 @@
+{
+  "name": "auth-testing-project-05",
+  "version": "1.0.0",
+  "description": "Комплексная система автоматического тестирования форм аутентификации (МДК 11 01 – проект 05) с запуском через npm.",
+  "private": true,
+  "scripts": {
+    "start": "php -S localhost:8000 -t .",
+    "test": "composer test"
+  }
+}
+
+
