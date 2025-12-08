@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Главная — Зеленый сервис</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="body-landing">
+    <header class="header">
+      <div class="header__inner">
+        <div class="logo">Зеленый сервис</div>
+        <nav class="nav">
+          <button class="nav__burger" aria-label="Открыть меню" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="nav__list">
+            <a class="nav__link" href="#hero">Главная</a>
+            <a class="nav__link" href="#about">О нас</a>
+            <a class="nav__link" href="#benefits">Преимущества</a>
+            <a class="nav__link" href="#projects">Проекты</a>
+            <a class="nav__link" href="#contacts">Контакты</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="landing">
+        <div class="landing__inner">
+          <div class="landing__top">
+            <div class="landing__search">
+              <input
+                class="landing__search-input"
+                type="search"
+                placeholder="Поиск"
+                aria-label="Поиск по сайту"
+              />
+            </div>
+            <div class="landing__actions">
+              <a href="register.html" class="pill-button">Регистрация</a>
+              <a href="login.html" class="pill-button">Вход</a>
+            </div>
+          </div>
+
+          <div class="landing__content">
+            <div>
+              <h1 class="landing__title">Зеленый сервис</h1>
+              <p class="landing__subtitle">
+                Быстрый старт: ищите услуги, бронируйте и управляйте ими в одном кабинете.
+                Всё просто, без лишних экранов — зелёные плавные формы остаются.
+              </p>
+              <div class="feature-chips">
+                <span class="feature-chip">Поиск и бронирование</span>
+                <span class="feature-chip">Личный кабинет</span>
+                <span class="feature-chip">Вход для админа</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="landing__bottom">
+            <a href="#about" class="pill-button pill-button--wide">О нас</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero" id="hero">
+        <div class="hero__grid">
+          <div class="hero__content">
+            <span class="badge">Адаптивный сервис</span>
+            <h1>Забронируйте услуги быстро и удобно</h1>
+            <p>
+              Современный интерфейс, понятная навигация и личный кабинет для пользователей и администраторов. Градиент, плавные формы и акцент на простоту — как в макете Figma.
+            </p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <a href="register.html" class="pill-button">Регистрация</a>
+              <a href="login.html" class="pill-button">Вход</a>
+            </div>
+          </div>
+          <div class="hero__image" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="section" id="benefits">
+        <div class="section__inner">
+          <h2 class="section__title">Преимущества</h2>
+          <div class="section__grid">
+            <div class="section__text">
+              <p>• Минималистичный интерфейс с крупными элементами и зелёным градиентом.</p>
+              <p>• Mobile-first вёрстка: меню-бургер, плавные скроллы и круглые кнопки.</p>
+              <p>• Быстрая навигация: фиксированное меню и якоря по блокам.</p>
+            </div>
+            <div class="section__image" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="about" id="about">
+        <div class="about__inner">
+          <div class="about__circle" aria-hidden="true"></div>
+          <div>
+            <h2 class="about__title">О нас</h2>
+            <p class="about__text">
+              Здесь кратко расскажите о сервисе: что вы делаете, кому помогаете
+              и какую проблему решаете. Текст можно заменить на точный из Figma.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="projects">
+        <div class="section__inner">
+          <h2 class="section__title">Проекты</h2>
+          <div class="slider">
+            <button class="slider__control slider__control--prev" aria-label="Предыдущий слайд">‹</button>
+            <div class="slider__track">
+              <div class="slide slide--active">
+                <div class="slide__image" aria-hidden="true"></div>
+                <h3 class="slide__title">Экологичное бронирование</h3>
+                <p class="slide__text">Пример карточки проекта с плавным градиентом и округлёнными формами.</p>
+              </div>
+              <div class="slide">
+                <div class="slide__image" aria-hidden="true"></div>
+                <h3 class="slide__title">Личный кабинет</h3>
+                <p class="slide__text">Страница профиля с блоками: имя, фамилия, бронирования, избранное.</p>
+              </div>
+              <div class="slide">
+                <div class="slide__image" aria-hidden="true"></div>
+                <h3 class="slide__title">Управление (админ)</h3>
+                <p class="slide__text">Отдельный вход для администратора и функции управления.</p>
+              </div>
+            </div>
+            <button class="slider__control slider__control--next" aria-label="Следующий слайд">›</button>
+            <div class="slider__dots">
+              <button class="slider__dot slider__dot--active" data-slide="0" aria-label="Слайд 1"></button>
+              <button class="slider__dot" data-slide="1" aria-label="Слайд 2"></button>
+              <button class="slider__dot" data-slide="2" aria-label="Слайд 3"></button>
+            </div>
+            <button class="slider__pause" type="button" aria-pressed="false">Пауза</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="contacts">
+        <div class="section__inner">
+          <h2 class="section__title">Контакты</h2>
+          <div class="section__grid">
+            <div class="section__text">
+              <p>Телефон: +7 (900) 000-00-00</p>
+              <p>Email: info@example.com</p>
+              <p>Адрес: Москва, Зеленая ул., 1</p>
+            </div>
+            <div class="section__text">
+              <p>Соцсети: Telegram, VK</p>
+              <p>Часы работы: 10:00–19:00</p>
+              <p>Связаться: заполните форму или напишите на почту.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <h3 class="footer__title">Мы на связи</h3>
+        <div class="footer__links">
+          <span class="footer__link">Тел.: +7 (900) 000-00-00</span>
+          <span class="footer__link">Email: info@example.com</span>
+          <span class="footer__link">Telegram</span>
+          <span class="footer__link">VK</span>
+        </div>
+        <p class="footer__copy">© <span id="current-year"></span> Зеленый сервис</p>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+  </html>

@@ -1,0 +1,24 @@
+{
+  "name": "mdk-11-01-project-06",
+  "version": "1.0.0",
+  "description": "Адаптивный одностраничный сайт по макету Figma с Node.js сервером (Express).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
+
+
+
+
+
