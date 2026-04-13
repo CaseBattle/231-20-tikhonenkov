@@ -21,7 +21,7 @@
           <a class="nav__link" href="#hero">Главная</a>
           <a class="nav__link" href="#about">О системе</a>
           <a class="nav__link" href="#benefits">Преимущества</a>
-          <a class="nav__link" href="#projects">Возможности</a>
+          <a class="nav__link" href="#listings">Объявления</a>
           <a class="nav__link" href="#contacts">Контакты</a>
         </div>
       </nav>
@@ -36,7 +36,7 @@
             <input
               class="landing__search-input"
               type="search"
-              placeholder="Поиск по разделам сайта"
+              placeholder="Поиск по объявлениям и разделам сайта"
               aria-label="Поиск по сайту"
             />
           </div>
@@ -53,13 +53,13 @@
               <span class="badge">Веб-приложение</span>
               <h1>Зеленый сервис</h1>
               <p class="hero__lead">
-                Современная информационная система для поиска, выбора и
-                бронирования услуг через единый веб-интерфейс.
+                Современная платформа для поиска, выбора и оформления заявок
+                на аренду и покупку недвижимости через единый веб-интерфейс.
               </p>
               <p>
-                Сайт реализует базовые функции взаимодействия пользователя с системой:
-                регистрацию, авторизацию, просмотр разделов, навигацию по контенту и
-                демонстрацию основных сценариев работы приложения.
+                Сайт позволяет просматривать объявления, знакомиться с объектами,
+                переходить к регистрации и авторизации, а также отправлять заявку
+                на аренду или покупку жилья в удобной форме.
               </p>
 
               <div class="hero__buttons">
@@ -68,18 +68,23 @@
               </div>
 
               <div class="feature-chips">
-                <span class="feature-chip">Адаптивный интерфейс</span>
+                <span class="feature-chip">Аренда и продажа</span>
                 <span class="feature-chip">Node.js + Express</span>
-                <span class="feature-chip">Удобная навигация</span>
+                <span class="feature-chip">Удобный поиск жилья</span>
               </div>
             </div>
 
             <div class="hero__media">
-              <img src="images/hero.jpg" alt="Главный экран сервиса" class="hero__image" />
+              <img src="images/hero.jpg" alt="Главный экран сервиса недвижимости" class="hero__image" />
             </div>
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="properties" id="listings">
+      <h2>Доступные объекты</h2>
+      <div id="propertyList" class="property-list"></div>
     </section>
 
     <section class="section section--light" id="about">
@@ -89,14 +94,15 @@
           <div>
             <h2 class="section__title">О системе</h2>
             <p class="section__text">
-              Разрабатываемая система предназначена для автоматизации взаимодействия
-              пользователей с сервисом через веб-интерфейс. Пользователь может
-              зарегистрироваться, войти в систему, перейти к основным разделам и
-              взаимодействовать с интерфейсом в удобной форме.
+              Разрабатываемая система предназначена для автоматизации работы
+              с объявлениями о недвижимости. Пользователь может просматривать
+              доступные объекты, подавать заявки, регистрироваться и входить
+              в систему через веб-интерфейс.
             </p>
             <p class="section__text">
-              Решение ориентировано на простоту использования, наглядность элементов
-              интерфейса и возможность дальнейшего расширения функциональности.
+              Решение ориентировано на простоту использования, удобную навигацию
+              и возможность дальнейшего расширения функциональности, включая
+              фильтрацию, личный кабинет и работу с базой данных.
             </p>
           </div>
         </div>
@@ -108,7 +114,7 @@
         <div class="section__heading">
           <h2 class="section__title">Преимущества системы</h2>
           <p class="section__subtitle">
-            Основные сильные стороны разработанного веб-интерфейса.
+            Основные сильные стороны разработанного веб-приложения.
           </p>
         </div>
 
@@ -120,34 +126,34 @@
           <div class="benefits__cards">
             <article class="info-card">
               <h3>Удобный интерфейс</h3>
-              <p>Структура страниц построена таким образом, чтобы пользователь быстро находил основные функции системы.</p>
+              <p>Пользователь быстро находит нужные разделы, объявления и формы взаимодействия с системой.</p>
             </article>
 
             <article class="info-card">
-              <h3>Адаптивность</h3>
-              <p>Сайт корректно отображается на различных устройствах, включая мобильные телефоны и планшеты.</p>
+              <h3>Актуальная тематика</h3>
+              <p>Сервис ориентирован на работу с арендой и продажей недвижимости, что соответствует теме курсового проекта.</p>
             </article>
 
             <article class="info-card">
-              <h3>Простая навигация</h3>
-              <p>Меню, якорные переходы и логичное расположение блоков ускоряют работу с системой.</p>
+              <h3>Интеграция с базой данных</h3>
+              <p>Система получает данные об объектах недвижимости из базы данных и отображает их на сайте.</p>
             </article>
 
             <article class="info-card">
               <h3>Готовность к развитию</h3>
-              <p>Проект может быть дополнен подключением базы данных, личного кабинета и обработкой пользовательских запросов.</p>
+              <p>Проект можно дополнить фильтрами, личным кабинетом, системой отзывов и онлайн-оплатой.</p>
             </article>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section section--light" id="projects">
+    <section class="section section--light" id="features">
       <div class="section__inner">
         <div class="section__heading">
           <h2 class="section__title">Функциональные возможности</h2>
           <p class="section__subtitle">
-            Ниже представлены основные возможности, реализованные в интерфейсе.
+            Ниже представлены основные сценарии работы системы.
           </p>
         </div>
 
@@ -165,20 +171,20 @@
               </div>
 
               <div class="slide">
-                <img src="images/project-2.jpg" alt="Интерфейс сервиса" class="slide__image" />
-                <h3 class="slide__title">Тематическое наполнение сервиса</h3>
+                <img src="images/project-2.jpg" alt="Интерфейс сервиса недвижимости" class="slide__image" />
+                <h3 class="slide__title">Просмотр объявлений</h3>
                 <p class="slide__text">
-                  Визуальная часть интерфейса отражает назначение системы и делает взаимодействие с сайтом более наглядным.
+                  Пользователь может ознакомиться с объектами недвижимости, их адресом и стоимостью аренды или продажи.
                 </p>
               </div>
 
               <div class="slide">
                 <div class="slide__image slide__image--placeholder">
-                  <span>Интерфейс взаимодействия с системой</span>
+                  <span>Подача заявки на объект</span>
                 </div>
-                <h3 class="slide__title">Навигация и демонстрация сценариев</h3>
+                <h3 class="slide__title">Отправка заявки</h3>
                 <p class="slide__text">
-                  Главная страница содержит основные блоки, навигационное меню и элементы, демонстрирующие структуру будущей системы.
+                  Через модальное окно пользователь может оставить заявку на интересующий объект недвижимости.
                 </p>
               </div>
             </div>
@@ -231,7 +237,7 @@
       <div>
         <h3 class="footer__title">Зеленый сервис</h3>
         <p class="footer__copy">
-          Учебный проект, демонстрирующий разработку веб-интерфейса и серверной части приложения.
+          Учебный проект, демонстрирующий разработку веб-интерфейса и серверной части приложения для работы с недвижимостью.
         </p>
       </div>
 
@@ -256,10 +262,10 @@
       </p>
 
       <form class="modal__form" id="requestForm">
-        <input type="text" class="modal__input" placeholder="Ваше имя" required />
-        <input type="tel" class="modal__input" placeholder="Телефон" required />
-        <input type="email" class="modal__input" placeholder="Электронная почта" required />
-        <textarea class="modal__textarea" placeholder="Комментарий или пожелания" required></textarea>
+        <input type="text" class="modal__input" name="name" placeholder="Ваше имя" required />
+        <input type="tel" class="modal__input" name="phone" placeholder="Телефон" required />
+        <input type="email" class="modal__input" name="email" placeholder="Электронная почта" required />
+        <textarea class="modal__textarea" name="comment" placeholder="Комментарий или пожелания" required></textarea>
         <button type="submit" class="pill-button modal__submit">Отправить заявку</button>
       </form>
     </div>
