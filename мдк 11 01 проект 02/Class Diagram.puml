@@ -1,44 +1,54 @@
 @startuml
 title База данных аренды жилья
 
+' ========================
+' СУЩНОСТИ
+' ========================
+
+class Role {
+  + id: INTEGER
+  + name: TEXT
+}
+
 class User {
-  - id: BIGINT
-  - email: VARCHAR
-  - name: VARCHAR
-  - phone: VARCHAR
-  - type: ENUM
+  + id: INTEGER
+  + email: TEXT
+  + password: TEXT
+  + role_id: INTEGER
 }
 
 class Property {
-  - id: BIGINT
-  - landlord_id: BIGINT
-  - title: VARCHAR
-  - address: TEXT
-  - price: DECIMAL
-  - available: BOOLEAN
+  + id: INTEGER
+  + landlord_id: INTEGER
+  + title: TEXT
+  + price: REAL
 }
 
 class Booking {
-  - id: BIGINT
-  - property_id: BIGINT
-  - tenant_id: BIGINT
-  - check_in: DATE
-  - check_out: DATE
-  - total_price: DECIMAL
-  - status: ENUM
+  + id: INTEGER
+  + property_id: INTEGER
+  + tenant_id: INTEGER
+  + status: TEXT
 }
 
 class Payment {
-  - id: BIGINT
-  - booking_id: BIGINT
-  - amount: DECIMAL
-  - status: ENUM
+  + id: INTEGER
+  + booking_id: INTEGER
+  + amount: REAL
+  + status: TEXT
 }
 
-' Связи между таблицами
+' ========================
+' СВЯЗИ
+' ========================
+
+Role ||--o{ User : имеет
+
 User ||--o{ Property : владеет
 User ||--o{ Booking : бронирует
-Property ||--o{ Booking : забронировано
-Booking ||--|| Payment : оплачивается
+
+Property ||--o{ Booking : забронирован
+
+Booking ||--o{ Payment : оплачивается
 
 @enduml

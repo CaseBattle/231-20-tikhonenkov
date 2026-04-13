@@ -1,50 +1,135 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Регистрация</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body class="page">
-    <div class="card">
-      <div class="form-header">
-        <a class="form-dot" href="index.html" aria-label="Назад на главную"></a>
-        <h1 class="form-title">Регистрация</h1>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Регистрация</title>
+  <link rel="stylesheet" href="styles.css" />
 
-      <form class="form-grid">
-        <input
-          type="email"
-          class="form-input"
-          placeholder="Введите почту"
-          aria-label="Введите почту"
-          required
-        />
-        <input
-          type="password"
-          class="form-input"
-          placeholder="Введите пароль"
-          aria-label="Введите пароль"
-          required
-        />
-        <input
-          type="password"
-          class="form-input"
-          placeholder="Повторите пароль"
-          aria-label="Повторите пароль"
-          required
-        />
-        <button type="submit" class="form-button">Зарегистрироваться</button>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #cfdcab 0%, #a8c33a 100%);
+    }
+
+    .register-page {
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+    }
+
+    .register-card {
+      background: rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(16px);
+      border-radius: 28px;
+      padding: 32px 28px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+      text-align: center;
+    }
+
+    .register-icon {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #d9ef8b, #76a51a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+    }
+
+    .register-title {
+      margin-bottom: 20px;
+      font-size: 34px;
+      font-weight: 800;
+    }
+
+    .register-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: left;
+    }
+
+    .register-input {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #c8d7a0;
+      outline: none;
+      background: rgba(255,255,255,0.9);
+    }
+
+    .register-input:focus {
+      border-color: #86ad28;
+      box-shadow: 0 0 0 4px rgba(134,173,40,0.2);
+    }
+
+    .register-button {
+      margin-top: 10px;
+      padding: 14px;
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #8fb12d, #b9d84c);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .register-links {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .register-links a {
+      display: block;
+      margin-top: 8px;
+      text-decoration: none;
+      color: #2a4109;
+      font-weight: 600;
+    }
+
+    .register-back {
+      margin-top: 20px;
+      display: inline-block;
+      font-size: 14px;
+      text-decoration: none;
+      color: #294108;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="register-page">
+    <div class="register-card">
+
+      <div class="register-icon">👤</div>
+
+      <h1 class="register-title">Регистрация</h1>
+
+      <form class="register-form">
+
+        <input class="register-input" type="text" placeholder="Имя" required>
+        <input class="register-input" type="email" placeholder="Email" required>
+        <input class="register-input" type="password" placeholder="Пароль" required>
+
+        <button class="register-button">Зарегистрироваться</button>
+
       </form>
 
-      <p class="form-footer">
-        Уже есть аккаунт?
-        <a class="link" href="login.html">Войти</a>
-      </p>
+      <div class="register-links">
+        <a href="login.html">Уже есть аккаунт? Войти</a>
+      </div>
+
+      <a href="index.html" class="register-back">← На главную</a>
+
     </div>
-  </body>
+  </div>
+
+</body>
 </html>
-
-
-
