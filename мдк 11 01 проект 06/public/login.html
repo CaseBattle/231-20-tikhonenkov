@@ -3,199 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Вход</title>
+  <title>Вход — Зеленый сервис</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #cfdcab 0%, #a8c33a 100%);
-    }
-
-    .login-page {
-      width: 100%;
-      max-width: 420px;
-      padding: 24px;
-    }
-
-    .login-card {
-      background: rgba(255, 255, 255, 0.22);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      border-radius: 28px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
-      padding: 32px 28px;
-      color: #1f1f1f;
-      text-align: center;
-    }
-
-    .login-icon {
-      width: 88px;
-      height: 88px;
-      margin: 0 auto 18px;
-      border-radius: 50%;
-      background: linear-gradient(180deg, #d9ef8b 0%, #76a51a 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-      font-size: 38px;
-    }
-
-    .login-title {
-      margin: 0 0 8px;
-      font-size: 36px;
-      font-weight: 800;
-    }
-
-    .login-subtitle {
-      margin: 0 0 24px;
-      color: #35510f;
-      line-height: 1.5;
-      font-size: 15px;
-    }
-
-    .login-form {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      text-align: left;
-    }
-
-    .login-label {
-      font-size: 14px;
-      font-weight: 600;
-      color: #2d420d;
-      margin-bottom: 6px;
-      display: block;
-    }
-
-    .login-input {
-      width: 100%;
-      padding: 14px 16px;
-      border-radius: 18px;
-      border: 1px solid #c8d7a0;
-      background: rgba(255, 255, 255, 0.9);
-      outline: none;
-      font-size: 15px;
-      box-sizing: border-box;
-      transition: 0.2s ease;
-    }
-
-    .login-input:focus {
-      border-color: #86ad28;
-      box-shadow: 0 0 0 4px rgba(134, 173, 40, 0.18);
-    }
-
-    .login-button {
-      margin-top: 8px;
-      width: 100%;
-      padding: 14px 18px;
-      border: none;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #8fb12d 0%, #b9d84c 100%);
-      color: #1f1f1f;
-      font-weight: 800;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .login-button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
-    }
-
-    .login-links {
-      margin-top: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .login-link {
-      color: #2a4109;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .login-link:hover {
-      text-decoration: underline;
-    }
-
-    .login-register {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      min-width: 180px;
-      padding: 12px 18px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.88);
-      border: 1px solid #cad7a7;
-      color: #1f1f1f;
-      text-decoration: none;
-      font-weight: 700;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-      transition: transform 0.15s ease;
-    }
-
-    .login-register:hover {
-      transform: translateY(-1px);
-    }
-
-    .login-back {
-      margin-top: 20px;
-      display: inline-block;
-      color: #294108;
-      font-size: 14px;
-      font-weight: 600;
-      text-decoration: none;
-    }
-
-    .login-back:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
-<body>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="login-icon">🔐</div>
+<body class="body-landing">
+  <main class="section">
+    <div class="section__inner">
+      <div class="contact-form" style="max-width: 520px; margin: 0 auto;">
+        <h2 class="section__title" style="font-size: 38px; margin-bottom: 16px;">Вход в систему</h2>
+        <p class="section__subtitle" style="margin-bottom: 24px;">
+          Для входа в админ-панель используйте учетную запись администратора.
+        </p>
 
-      <h1 class="login-title">Вход</h1>
-      <p class="login-subtitle">
-        Введите данные учётной записи для входа в систему.
-      </p>
+        <form id="loginForm">
+          <input
+            type="email"
+            name="email"
+            class="contact-form__input"
+            placeholder="Email"
+            required
+          />
 
-      <form class="login-form">
-        <div>
-          <label class="login-label" for="email">Электронная почта</label>
-          <input class="login-input" id="email" type="email" placeholder="Введите почту" required />
-        </div>
+          <input
+            type="password"
+            name="password"
+            class="contact-form__input"
+            placeholder="Пароль"
+            required
+          />
 
-        <div>
-          <label class="login-label" for="password">Пароль</label>
-          <input class="login-input" id="password" type="password" placeholder="Введите пароль" required />
-        </div>
+          <button type="submit" class="pill-button contact-form__button">Войти</button>
+        </form>
 
-        <button type="submit" class="login-button">Войти</button>
-      </form>
+        <p style="margin-top: 18px; color: #4d5a3e;">
+          Админ: <strong>admin@mail.com</strong><br />
+          Пароль: <strong>admin123</strong>
+        </p>
 
-      <div class="login-links">
-        <a href="#" class="login-link">Забыли пароль?</a>
-        <a href="register.html" class="login-register">Регистрация</a>
+        <p id="loginMessage" style="margin-top: 12px; color: #b00020;"></p>
       </div>
-
-      <a href="index.html" class="login-back">← Вернуться на главную</a>
     </div>
-  </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('loginMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const payload = {
+        email: formData.get('email'),
+        password: formData.get('password')
+      };
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          window.location.href = data.redirect;
+        } else {
+          message.textContent = data.message || 'Ошибка входа';
+        }
+      } catch (error) {
+        console.error(error);
+        message.textContent = 'Ошибка подключения к серверу';
+      }
+    });
+  </script>
 </body>
 </html>

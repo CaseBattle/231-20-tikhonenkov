@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Админ-панель — Зеленый сервис</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="body-landing">
+  <header class="header">
+    <div class="header__inner">
+      <a href="/" class="logo">Зеленый сервис</a>
+
+      <div class="landing__actions">
+        <button class="pill-button pill-button--ghost" id="logoutBtn" type="button">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="section__inner">
+      <div class="section__heading">
+        <h1 class="section__title">Админ-панель</h1>
+        <p class="section__subtitle">
+          Добавление и удаление объявлений о недвижимости.
+        </p>
+      </div>
+
+      <div class="contacts-grid" style="align-items: start;">
+        <div class="contact-form">
+          <h3 style="margin-top: 0;">Добавить объявление</h3>
+
+          <form id="addPropertyForm">
+            <input
+              type="text"
+              name="title"
+              class="contact-form__input"
+              placeholder="Название объекта"
+              required
+            />
+
+            <input
+              type="text"
+              name="address"
+              class="contact-form__input"
+              placeholder="Адрес"
+              required
+            />
+
+            <input
+              type="number"
+              name="price"
+              class="contact-form__input"
+              placeholder="Цена"
+              required
+            />
+
+            <select
+              name="type"
+              class="contact-form__input"
+              required
+            >
+              <option value="rent">Аренда</option>
+              <option value="sale">Продажа</option>
+            </select>
+
+            <button type="submit" class="pill-button contact-form__button">
+              Добавить объявление
+            </button>
+          </form>
+
+          <p id="adminMessage" style="margin-top: 14px; color: #2d3b0b;"></p>
+        </div>
+
+        <div>
+          <h3 style="margin: 0 0 18px; font-size: 28px;">Текущие объявления</h3>
+          <div id="adminPropertyList" class="property-list"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    async function loadAdminProperties() {
+      const list = document.getElementById('adminPropertyList');
+      list.innerHTML = '';
+
+      try {
+        const res = await fetch('/admin/properties');
+
+        if (res.status === 401) {
+          window.location.href = '/login.html';
+          return;
+        }
+
+        const data = await res.json();
+
+        data.forEach((item) => {
+          const isSale = item.type === 'sale' || Number(item.price) > 1000000;
+          const typeLabel = isSale ? 'Продажа' : 'Аренда';
+
+          const card = document.createElement('article');
+          card.className = 'property-card';
+
+          card.innerHTML = `
+            <div class="property-card__top">
+              <span class="property-card__badge">${typeLabel}</span>
+            </div>
+            <h3>${item.title}</h3>
+            <p class="property-card__address">${item.address}</p>
+            <p class="property-card__price">
+              ${isSale
+                ? Number(item.price).toLocaleString('ru-RU') + ' ₽'
+                : Number(item.price).toLocaleString('ru-RU') + ' ₽ / мес'}
+            </p>
+            <button class="pill-button" type="button" data-id="${item.id}">
+              Удалить
+            </button>
+          `;
+
+          const deleteBtn = card.querySelector('button');
+
+          deleteBtn.addEventListener('click', async () => {
+            const confirmDelete = confirm(`Удалить объявление "${item.title}"?`);
+            if (!confirmDelete) return;
+
+            const res = await fetch(`/admin/properties/${item.id}`, {
+              method: 'DELETE'
+            });
+
+            const result = await res.json();
+
+            if (result.success) {
+              loadAdminProperties();
+            } else {
+              alert('Ошибка удаления');
+            }
+          });
+
+          list.appendChild(card);
+        });
+      } catch (error) {
+        console.error(error);
+        alert('Ошибка загрузки объявлений');
+      }
+    }
+
+    document.getElementById('addPropertyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const payload = {
+        title: formData.get('title'),
+        address: formData.get('address'),
+        price: formData.get('price'),
+        type: formData.get('type'),
+        available: 1
+      };
+
+      try {
+        const res = await fetch('/admin/properties', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        const msg = document.getElementById('adminMessage');
+
+        if (result.success) {
+          msg.textContent = 'Объявление успешно добавлено';
+          e.target.reset();
+          loadAdminProperties();
+        } else {
+          msg.textContent = result.message || 'Ошибка добавления';
+        }
+      } catch (error) {
+        console.error(error);
+        alert('Ошибка добавления объявления');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    loadAdminProperties();
+  </script>
+</body>
+</html>
