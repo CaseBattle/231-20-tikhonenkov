@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мои заявки</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="body-landing">
+
+<header class="header">
+  <div class="header__inner">
+    <a href="/" class="logo">Зеленый сервис</a>
+
+    <div class="landing__actions">
+      <a href="/" class="pill-button pill-button--ghost">Главная</a>
+      <button id="logoutBtn" class="pill-button">Выйти</button>
+    </div>
+  </div>
+</header>
+
+<main class="section">
+  <div class="section__inner">
+    <div class="section__heading">
+      <h1 class="section__title">Мои заявки</h1>
+      <p class="section__subtitle">
+        Здесь отображаются все поданные вами заявки и их текущий статус.
+      </p>
+    </div>
+
+    <div id="myRequestsList" class="property-list"></div>
+  </div>
+</main>
+
+<script>
+function statusText(status){
+  if(status === 'approved') return 'Одобрена';
+  if(status === 'deleted') return 'Удалена';
+  return 'Ожидание';
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch('/logout', { method:'POST' });
+  location.href = '/login.html';
+});
+
+async function loadMyRequests(){
+  const wrap = document.getElementById('myRequestsList');
+  wrap.innerHTML = '';
+
+  const res = await fetch('/my/requests');
+
+  if(res.status === 401){
+    location.href = '/login.html';
+    return;
+  }
+
+  const items = await res.json();
+
+  if(!items.length){
+    wrap.innerHTML = '<p style="font-size:18px;color:#4d5a3e;">У вас пока нет заявок.</p>';
+    return;
+  }
+
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'property-card';
+
+    card.innerHTML = `
+      <div class="property-badge">${statusText(item.status)}</div>
+
+      <h3>${item.property_title || 'Объект не найден'}</h3>
+      <p><strong>Адрес:</strong> ${item.property_address || '-'}</p>
+      <p><strong>Комментарий:</strong> ${item.comment || '-'}</p>
+      <p><strong>Телефон:</strong> ${item.phone}</p>
+      <p><strong>Дата:</strong> ${new Date(item.created_at).toLocaleString('ru-RU')}</p>
+    `;
+
+    wrap.appendChild(card);
+  });
+}
+
+loadMyRequests();
+</script>
+
+</body>
+</html>

@@ -63,6 +63,7 @@
       border: 1px solid #c8d7a0;
       outline: none;
       background: rgba(255,255,255,0.9);
+      font-size: 15px;
     }
 
     .register-input:focus {
@@ -78,6 +79,7 @@
       background: linear-gradient(90deg, #8fb12d, #b9d84c);
       font-weight: bold;
       cursor: pointer;
+      font-size: 15px;
     }
 
     .register-links {
@@ -100,36 +102,83 @@
       text-decoration: none;
       color: #294108;
     }
+
+    .register-message {
+      margin-top: 14px;
+      min-height: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #8b1e1e;
+    }
   </style>
 </head>
 
 <body>
-
   <div class="register-page">
     <div class="register-card">
-
       <div class="register-icon">👤</div>
 
       <h1 class="register-title">Регистрация</h1>
 
-      <form class="register-form">
+      <form class="register-form" id="registerForm">
+        <input class="register-input" type="text" name="name" placeholder="Имя" required>
+        <input class="register-input" type="tel" name="phone" placeholder="Телефон" required>
+        <input class="register-input" type="email" name="email" placeholder="Email" required>
+        <input class="register-input" type="password" name="password" placeholder="Пароль" required>
 
-        <input class="register-input" type="text" placeholder="Имя" required>
-        <input class="register-input" type="email" placeholder="Email" required>
-        <input class="register-input" type="password" placeholder="Пароль" required>
-
-        <button class="register-button">Зарегистрироваться</button>
-
+        <button class="register-button" type="submit">Зарегистрироваться</button>
       </form>
+
+      <p id="registerMessage" class="register-message"></p>
 
       <div class="register-links">
         <a href="login.html">Уже есть аккаунт? Войти</a>
       </div>
 
       <a href="index.html" class="register-back">← На главную</a>
-
     </div>
   </div>
 
+  <script>
+    const registerForm = document.getElementById('registerForm');
+    const registerMessage = document.getElementById('registerMessage');
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(registerForm);
+
+      const payload = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        password: formData.get('password')
+      };
+
+      registerMessage.textContent = '';
+
+      try {
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          alert(data.message || 'Регистрация выполнена');
+          window.location.href = data.redirect || '/login.html';
+        } else {
+          registerMessage.textContent = data.message || 'Ошибка регистрации';
+        }
+      } catch (error) {
+        console.error(error);
+        registerMessage.textContent = 'Ошибка подключения к серверу';
+      }
+    });
+  </script>
 </body>
 </html>

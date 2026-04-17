@@ -3,189 +3,251 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Админ-панель — Зеленый сервис</title>
+  <title>Админ-панель</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="body-landing">
-  <header class="header">
-    <div class="header__inner">
-      <a href="/" class="logo">Зеленый сервис</a>
 
-      <div class="landing__actions">
-        <button class="pill-button pill-button--ghost" id="logoutBtn" type="button">Выйти</button>
-      </div>
+<header class="header">
+  <div class="header__inner">
+    <a href="/" class="logo">Зеленый сервис</a>
+
+    <div class="landing__actions">
+      <a href="/" class="pill-button pill-button--ghost">Главная</a>
+      <button id="logoutBtn" class="pill-button">Выйти</button>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main class="section">
-    <div class="section__inner">
-      <div class="section__heading">
-        <h1 class="section__title">Админ-панель</h1>
-        <p class="section__subtitle">
-          Добавление и удаление объявлений о недвижимости.
-        </p>
-      </div>
+<main class="section">
+  <div class="section__inner">
 
-      <div class="contacts-grid" style="align-items: start;">
-        <div class="contact-form">
-          <h3 style="margin-top: 0;">Добавить объявление</h3>
-
-          <form id="addPropertyForm">
-            <input
-              type="text"
-              name="title"
-              class="contact-form__input"
-              placeholder="Название объекта"
-              required
-            />
-
-            <input
-              type="text"
-              name="address"
-              class="contact-form__input"
-              placeholder="Адрес"
-              required
-            />
-
-            <input
-              type="number"
-              name="price"
-              class="contact-form__input"
-              placeholder="Цена"
-              required
-            />
-
-            <select
-              name="type"
-              class="contact-form__input"
-              required
-            >
-              <option value="rent">Аренда</option>
-              <option value="sale">Продажа</option>
-            </select>
-
-            <button type="submit" class="pill-button contact-form__button">
-              Добавить объявление
-            </button>
-          </form>
-
-          <p id="adminMessage" style="margin-top: 14px; color: #2d3b0b;"></p>
-        </div>
-
-        <div>
-          <h3 style="margin: 0 0 18px; font-size: 28px;">Текущие объявления</h3>
-          <div id="adminPropertyList" class="property-list"></div>
-        </div>
-      </div>
+    <div class="section__heading">
+      <h1 class="section__title">Админ-панель</h1>
+      <p class="section__subtitle">
+        Управление объявлениями, заявками пользователей и обратной связью.
+      </p>
     </div>
-  </main>
 
-  <script>
-    async function loadAdminProperties() {
-      const list = document.getElementById('adminPropertyList');
-      list.innerHTML = '';
+    <!-- ДОБАВИТЬ ОБЪЯВЛЕНИЕ -->
+    <section class="section section--light" style="margin-bottom:40px;">
+      <div class="section__inner">
+        <h2 class="section__title" style="font-size:34px;">Добавить объявление</h2>
 
-      try {
-        const res = await fetch('/admin/properties');
+        <form id="addPropertyForm" class="contact-form">
+          <input type="text" name="title" class="contact-form__input" placeholder="Название объекта" required />
+          <input type="text" name="address" class="contact-form__input" placeholder="Адрес" required />
+          <input type="number" name="price" class="contact-form__input" placeholder="Цена" required />
 
-        if (res.status === 401) {
-          window.location.href = '/login.html';
-          return;
-        }
+          <select name="type" class="contact-form__input">
+            <option value="rent">Аренда</option>
+            <option value="sale">Продажа</option>
+          </select>
 
-        const data = await res.json();
+          <button type="submit" class="pill-button contact-form__button">
+            Добавить объявление
+          </button>
+        </form>
 
-        data.forEach((item) => {
-          const isSale = item.type === 'sale' || Number(item.price) > 1000000;
-          const typeLabel = isSale ? 'Продажа' : 'Аренда';
+        <p id="adminMessage" style="margin-top:15px;"></p>
+      </div>
+    </section>
 
-          const card = document.createElement('article');
-          card.className = 'property-card';
+    <!-- ОБЪЯВЛЕНИЯ -->
+    <section style="margin-bottom:50px;">
+      <h2 class="section__title" style="font-size:34px;">Все объявления</h2>
+      <div id="adminPropertyList" class="property-list"></div>
+    </section>
 
-          card.innerHTML = `
-            <div class="property-card__top">
-              <span class="property-card__badge">${typeLabel}</span>
-            </div>
-            <h3>${item.title}</h3>
-            <p class="property-card__address">${item.address}</p>
-            <p class="property-card__price">
-              ${isSale
-                ? Number(item.price).toLocaleString('ru-RU') + ' ₽'
-                : Number(item.price).toLocaleString('ru-RU') + ' ₽ / мес'}
-            </p>
-            <button class="pill-button" type="button" data-id="${item.id}">
-              Удалить
-            </button>
-          `;
+    <!-- ЗАЯВКИ -->
+    <section style="margin-bottom:50px;">
+      <h2 class="section__title" style="font-size:34px;">Заявки пользователей</h2>
+      <div id="requestList" class="property-list"></div>
+    </section>
 
-          const deleteBtn = card.querySelector('button');
+    <!-- ОБРАТНАЯ СВЯЗЬ -->
+    <section>
+      <h2 class="section__title" style="font-size:34px;">Обратная связь</h2>
+      <div id="feedbackList" class="property-list"></div>
+    </section>
 
-          deleteBtn.addEventListener('click', async () => {
-            const confirmDelete = confirm(`Удалить объявление "${item.title}"?`);
-            if (!confirmDelete) return;
+  </div>
+</main>
 
-            const res = await fetch(`/admin/properties/${item.id}`, {
-              method: 'DELETE'
-            });
+<script>
+function statusText(status){
+  if(status === 'approved') return 'Одобрена';
+  if(status === 'deleted') return 'Удалена';
+  return 'Ожидание';
+}
 
-            const result = await res.json();
+/* ВЫХОД */
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch('/logout', { method:'POST' });
+  location.href = '/login.html';
+});
 
-            if (result.success) {
-              loadAdminProperties();
-            } else {
-              alert('Ошибка удаления');
-            }
-          });
+/* ДОБАВЛЕНИЕ ОБЪЯВЛЕНИЯ */
+document.getElementById('addPropertyForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
 
-          list.appendChild(card);
-        });
-      } catch (error) {
-        console.error(error);
-        alert('Ошибка загрузки объявлений');
-      }
-    }
+  const form = new FormData(e.target);
 
-    document.getElementById('addPropertyForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+  const body = {
+    title: form.get('title'),
+    address: form.get('address'),
+    price: form.get('price'),
+    type: form.get('type'),
+    available: 1
+  };
 
-      const formData = new FormData(e.target);
-      const payload = {
-        title: formData.get('title'),
-        address: formData.get('address'),
-        price: formData.get('price'),
-        type: formData.get('type'),
-        available: 1
-      };
+  const res = await fetch('/admin/properties',{
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
 
-      try {
-        const res = await fetch('/admin/properties', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+  const data = await res.json();
 
-        const result = await res.json();
-        const msg = document.getElementById('adminMessage');
+  document.getElementById('adminMessage').textContent =
+    data.success ? 'Объявление добавлено' : 'Ошибка добавления';
 
-        if (result.success) {
-          msg.textContent = 'Объявление успешно добавлено';
-          e.target.reset();
-          loadAdminProperties();
-        } else {
-          msg.textContent = result.message || 'Ошибка добавления';
-        }
-      } catch (error) {
-        console.error(error);
-        alert('Ошибка добавления объявления');
-      }
+  if(data.success){
+    e.target.reset();
+    loadProperties();
+  }
+});
+
+/* ОБЪЯВЛЕНИЯ */
+async function loadProperties(){
+  const wrap = document.getElementById('adminPropertyList');
+  wrap.innerHTML = '';
+
+  const res = await fetch('/admin/properties');
+  const items = await res.json();
+
+  items.forEach(item=>{
+    const card = document.createElement('div');
+    card.className = 'property-card';
+
+    card.innerHTML = `
+      <div class="property-badge">
+        ${item.type === 'sale' ? 'Продажа' : 'Аренда'}
+      </div>
+
+      <h3>${item.title}</h3>
+      <p>${item.address}</p>
+      <strong>${Number(item.price).toLocaleString('ru-RU')} ₽</strong>
+
+      <button class="pill-button deleteBtn">
+        Удалить
+      </button>
+    `;
+
+    card.querySelector('.deleteBtn').addEventListener('click', async ()=>{
+      await fetch('/admin/properties/' + item.id,{
+        method:'DELETE'
+      });
+
+      loadProperties();
     });
 
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await fetch('/logout', { method: 'POST' });
-      window.location.href = '/login.html';
+    wrap.appendChild(card);
+  });
+}
+
+/* ЗАЯВКИ */
+async function loadRequests(){
+  const wrap = document.getElementById('requestList');
+  wrap.innerHTML = '';
+
+  const res = await fetch('/admin/requests');
+  const items = await res.json();
+
+  items.forEach(item=>{
+    const card = document.createElement('div');
+    card.className = 'property-card';
+
+    card.innerHTML = `
+      <div class="property-badge">${statusText(item.status)}</div>
+
+      <h3>${item.user_name}</h3>
+      <p><strong>Объект:</strong> ${item.property_title || 'Не найден'}</p>
+      <p><strong>Телефон:</strong> ${item.phone}</p>
+      <p><strong>Email:</strong> ${item.email}</p>
+      <p><strong>Комментарий:</strong> ${item.comment || '-'}</p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
+        <button class="pill-button approveBtn">
+          Одобрить
+        </button>
+
+        <button class="pill-button pill-button--ghost deleteReqBtn">
+          Удалить
+        </button>
+      </div>
+    `;
+
+    card.querySelector('.approveBtn').addEventListener('click', async ()=>{
+      await fetch('/admin/requests/' + item.id + '/approve',{
+        method:'PATCH'
+      });
+
+      loadRequests();
     });
 
-    loadAdminProperties();
-  </script>
+    card.querySelector('.deleteReqBtn').addEventListener('click', async ()=>{
+      await fetch('/admin/requests/' + item.id + '/delete',{
+        method:'PATCH'
+      });
+
+      loadRequests();
+    });
+
+    wrap.appendChild(card);
+  });
+}
+
+/* ОБРАТНАЯ СВЯЗЬ */
+async function loadFeedback(){
+  const wrap = document.getElementById('feedbackList');
+  wrap.innerHTML = '';
+
+  const res = await fetch('/admin/feedback');
+  const items = await res.json();
+
+  items.forEach(item=>{
+    const card = document.createElement('div');
+    card.className = 'property-card';
+
+    card.innerHTML = `
+      <div class="property-badge">Сообщение</div>
+
+      <h3>${item.name}</h3>
+      <p><strong>Email:</strong> ${item.email}</p>
+      <p>${item.message}</p>
+
+      <button class="pill-button deleteFbBtn">
+        Удалить
+      </button>
+    `;
+
+    card.querySelector('.deleteFbBtn').addEventListener('click', async ()=>{
+      await fetch('/admin/feedback/' + item.id,{
+        method:'DELETE'
+      });
+
+      loadFeedback();
+    });
+
+    wrap.appendChild(card);
+  });
+}
+
+loadProperties();
+loadRequests();
+loadFeedback();
+</script>
+
 </body>
 </html>

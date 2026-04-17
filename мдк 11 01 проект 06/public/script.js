@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const currentYear = document.getElementById('current-year');
   const searchInput = document.querySelector('.landing__search-input');
+  const authArea = document.getElementById('authArea');
 
   const sliderTrack = document.querySelector('.slider__track');
   const slides = document.querySelectorAll('.slide');
@@ -21,12 +22,54 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentSlide = 0;
   let sliderInterval = null;
   let isPaused = false;
+  let currentPropertyId = null;
 
   if (currentYear) {
     currentYear.textContent = new Date().getFullYear();
   }
 
-  // Бургер-меню
+  async function renderAuthState() {
+    if (!authArea) return;
+
+    try {
+      const res = await fetch('/me');
+      const data = await res.json();
+
+      if (data.userEmail) {
+        if (data.isAdmin) {
+          authArea.innerHTML = `
+            <span class="feature-chip">${data.userEmail}</span>
+            <a href="admin.html" class="pill-button pill-button--ghost">Админ-панель</a>
+            <button class="pill-button pill-button--ghost" id="logoutHeaderBtn" type="button">Выйти</button>
+          `;
+        } else {
+          authArea.innerHTML = `
+            <span class="feature-chip">${data.userEmail}</span>
+            <a href="my-requests.html" class="pill-button pill-button--ghost">Мои заявки</a>
+            <button class="pill-button pill-button--ghost" id="logoutHeaderBtn" type="button">Выйти</button>
+          `;
+        }
+
+        const logoutBtn = document.getElementById('logoutHeaderBtn');
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', async () => {
+            await fetch('/logout', { method: 'POST' });
+            window.location.reload();
+          });
+        }
+      } else {
+        authArea.innerHTML = `
+          <a href="register.html" class="pill-button">Регистрация</a>
+          <a href="login.html" class="pill-button">Вход</a>
+        `;
+      }
+    } catch (error) {
+      console.error('Ошибка получения состояния пользователя:', error);
+    }
+  }
+
+  renderAuthState();
+
   if (navBurger && navList) {
     navBurger.addEventListener('click', () => {
       navList.classList.toggle('nav__list--open');
@@ -46,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Модальное окно
   function openModal() {
     if (!requestModal) return;
     requestModal.classList.add('modal--open');
@@ -59,13 +101,15 @@ document.addEventListener('DOMContentLoaded', () => {
     requestModal.classList.remove('modal--open');
     requestModal.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
+    currentPropertyId = null;
   }
 
-  window.openModalWithObject = function (title) {
-    const commentField = document.querySelector('#requestForm textarea[name="comment"]');
+  window.openModalWithObject = function (title, propertyId) {
+    const commentField = document.querySelector('#requestForm textarea');
     if (commentField) {
       commentField.value = `Интересует объект: ${title}`;
     }
+    currentPropertyId = propertyId || null;
     openModal();
   };
 
@@ -87,81 +131,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Отправка формы заявки
   if (requestForm) {
     requestForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const formData = new FormData(requestForm);
-      const payload = {
-        name: formData.get('name') || '',
-        phone: formData.get('phone') || '',
-        email: formData.get('email') || '',
-        comment: formData.get('comment') || ''
+      const inputs = requestForm.querySelectorAll('input, textarea');
+
+      const body = {
+        name: inputs[0].value.trim(),
+        phone: inputs[1].value.trim(),
+        email: inputs[2].value.trim(),
+        comment: inputs[3].value.trim(),
+        propertyId: currentPropertyId
       };
 
       try {
-        const response = await fetch('/request', {
+        const res = await fetch('/request', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(body)
         });
 
-        const data = await response.json();
+        const data = await res.json();
+
+        alert(data.message || 'Заявка отправлена');
 
         if (data.success) {
-          alert('Заявка успешно отправлена');
           requestForm.reset();
           closeModal();
-        } else {
-          alert('Не удалось отправить заявку');
         }
       } catch (error) {
-        console.error('Ошибка отправки формы:', error);
-        alert('Ошибка при отправке заявки');
+        alert('Ошибка отправки заявки');
       }
     });
   }
 
-  // Слайдер
-  function updateSlider() {
-    if (!sliderTrack || !slides.length) return;
+  async function loadProperties() {
+    const propertyList = document.getElementById('propertyList');
+    if (!propertyList) return;
 
-    sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+    try {
+      const res = await fetch('/properties');
+      const items = await res.json();
 
-    slides.forEach((slide, index) => {
-      slide.classList.toggle('slide--active', index === currentSlide);
-    });
+      propertyList.innerHTML = '';
 
-    dots.forEach((dot, index) => {
-      dot.classList.toggle('slider__dot--active', index === currentSlide);
+      items.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'property-card';
+
+        const isSale = item.type === 'sale';
+
+        card.innerHTML = `
+          <div class="property-badge">
+            ${isSale ? 'Продажа' : 'Аренда'}
+          </div>
+
+          <h3>${item.title}</h3>
+          <p>${item.address}</p>
+          <strong>
+            ${Number(item.price).toLocaleString('ru-RU')} ₽
+            ${isSale ? '' : ' / мес'}
+          </strong>
+
+          <button class="pill-button property-btn">
+            Подать заявку
+          </button>
+        `;
+
+        const btn = card.querySelector('.property-btn');
+        btn.addEventListener('click', () => {
+          openModalWithObject(item.title, item.id);
+        });
+
+        propertyList.appendChild(card);
+      });
+    } catch (error) {
+      console.error('Ошибка загрузки объявлений');
+    }
+  }
+
+  loadProperties();
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const value = searchInput.value.toLowerCase();
+      const cards = document.querySelectorAll('.property-card');
+
+      cards.forEach((card) => {
+        const text = card.innerText.toLowerCase();
+        card.style.display = text.includes(value) ? '' : 'none';
+      });
     });
   }
 
-  function goToSlide(index) {
+  function showSlide(index) {
     if (!slides.length) return;
-    currentSlide = (index + slides.length) % slides.length;
-    updateSlider();
+
+    if (index < 0) index = slides.length - 1;
+    if (index >= slides.length) index = 0;
+
+    currentSlide = index;
+
+    if (sliderTrack) {
+      sliderTrack.style.transform = `translateX(-${index * 100}%)`;
+    }
+
+    slides.forEach((slide, i) => {
+      slide.classList.toggle('slide--active', i === index);
+    });
+
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('slider__dot--active', i === index);
+    });
   }
 
   function nextSlide() {
-    goToSlide(currentSlide + 1);
-  }
-
-  function prevSlide() {
-    goToSlide(currentSlide - 1);
+    showSlide(currentSlide + 1);
   }
 
   function startSlider() {
-    if (!slides.length) return;
     stopSlider();
-    sliderInterval = setInterval(() => {
-      if (!isPaused) {
-        nextSlide();
-      }
-    }, 5000);
+    sliderInterval = setInterval(nextSlide, 5000);
   }
 
   function stopSlider() {
@@ -171,97 +264,76 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  if (slides.length) {
+    showSlide(0);
+    startSlider();
+  }
+
   if (prevBtn) {
-    prevBtn.addEventListener('click', prevSlide);
+    prevBtn.addEventListener('click', () => {
+      showSlide(currentSlide - 1);
+    });
   }
 
   if (nextBtn) {
-    nextBtn.addEventListener('click', nextSlide);
+    nextBtn.addEventListener('click', () => {
+      showSlide(currentSlide + 1);
+    });
   }
 
   dots.forEach((dot, index) => {
     dot.addEventListener('click', () => {
-      goToSlide(index);
+      showSlide(index);
     });
   });
 
   if (pauseBtn) {
     pauseBtn.addEventListener('click', () => {
       isPaused = !isPaused;
-      pauseBtn.textContent = isPaused ? 'Продолжить' : 'Пауза';
-      pauseBtn.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
+
+      if (isPaused) {
+        stopSlider();
+        pauseBtn.textContent = 'Продолжить';
+      } else {
+        startSlider();
+        pauseBtn.textContent = 'Пауза';
+      }
     });
   }
 
-  updateSlider();
-  startSlider();
-
-  // Загрузка объектов недвижимости
-  fetch('/properties')
-    .then((res) => res.json())
-    .then((data) => {
-      const list = document.getElementById('propertyList');
-      if (!list) return;
-
-      list.innerHTML = '';
-
-      data.forEach((item) => {
-        const isSale = item.price > 1000000;
-        const typeLabel = isSale ? 'Продажа' : 'Аренда';
-
-        const card = document.createElement('article');
-        card.className = 'property-card';
-
-        card.innerHTML = `
-          <div class="property-card__top">
-            <span class="property-card__badge">${typeLabel}</span>
-          </div>
-          <h3>${item.title}</h3>
-          <p class="property-card__address">${item.address}</p>
-          <p class="property-card__price">
-            ${isSale
-              ? Number(item.price).toLocaleString('ru-RU') + ' ₽'
-              : Number(item.price).toLocaleString('ru-RU') + ' ₽ / мес'}
-          </p>
-          <button class="pill-button property-card__button" type="button">
-            Оставить заявку
-          </button>
-        `;
-
-        const button = card.querySelector('.property-card__button');
-        if (button) {
-          button.addEventListener('click', () => {
-            window.openModalWithObject(item.title);
-          });
-        }
-
-        list.appendChild(card);
-      });
-
-      // Поиск по объявлениям
-      if (searchInput) {
-        searchInput.addEventListener('input', function () {
-          const value = this.value.toLowerCase();
-          const cards = document.querySelectorAll('.property-card');
-
-          cards.forEach((card) => {
-            const text = card.innerText.toLowerCase();
-            card.style.display = text.includes(value) ? '' : 'none';
-          });
-        });
-      }
-    })
-    .catch((err) => {
-      console.error('Ошибка загрузки объявлений:', err);
-    });
-
-  // Форма обратной связи
   const contactForm = document.querySelector('.contact-form');
+
   if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+    contactForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      alert('Сообщение отправлено');
-      contactForm.reset();
+
+      const name = contactForm.querySelector('input[type="text"]').value.trim();
+      const email = contactForm.querySelector('input[type="email"]').value.trim();
+      const message = contactForm.querySelector('textarea').value.trim();
+
+      try {
+        const res = await fetch('/feedback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            message
+          })
+        });
+
+        const data = await res.json();
+
+        alert(data.message || 'Сообщение отправлено');
+
+        if (data.success) {
+          contactForm.reset();
+        }
+      } catch (error) {
+        alert('Ошибка подключения к серверу');
+      }
     });
   }
 });
