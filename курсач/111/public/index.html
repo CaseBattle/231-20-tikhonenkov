@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Главная — Зеленый сервис</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="body-landing">
+
+  <header class="header">
+    <div class="header__inner">
+      <a href="#hero" class="logo">Зеленый сервис</a>
+
+      <nav class="nav">
+        <button class="nav__burger" aria-label="Открыть меню" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+
+        <div class="nav__list">
+          <a class="nav__link" href="#hero">Главная</a>
+          <a class="nav__link" href="#about">О системе</a>
+          <a class="nav__link" href="#benefits">Преимущества</a>
+          <a class="nav__link" href="#listings">Объявления</a>
+          <a class="nav__link" href="#contacts">Контакты</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="landing" id="hero">
+      <div class="landing__inner">
+        <div class="landing__top">
+          <div class="landing__search">
+            <input
+              class="landing__search-input"
+              type="search"
+              placeholder="Поиск по объявлениям и разделам сайта"
+              aria-label="Поиск по сайту"
+            />
+          </div>
+
+          <div class="landing__actions" id="authArea">
+            <a href="register.html" class="pill-button">Регистрация</a>
+            <a href="login.html" class="pill-button">Вход</a>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="hero__grid">
+            <div class="hero__content">
+              <span class="badge">Веб-приложение</span>
+              <h1>Зеленый сервис</h1>
+              <p class="hero__lead">
+                Современная платформа для поиска, выбора и оформления заявок
+                на аренду и покупку недвижимости через единый веб-интерфейс.
+              </p>
+              <p>
+                Сайт позволяет просматривать объявления, знакомиться с объектами,
+                переходить к регистрации и авторизации, а также отправлять заявку
+                на аренду или покупку жилья в удобной форме.
+              </p>
+
+              <div class="hero__buttons">
+                <button class="pill-button" id="openRequestModal" type="button">Оставить заявку</button>
+                <a href="login.html" class="pill-button pill-button--ghost">Войти в систему</a>
+              </div>
+
+              <div class="feature-chips">
+                <span class="feature-chip">Аренда и продажа</span>
+                <span class="feature-chip">Node.js + Express</span>
+                <span class="feature-chip">Удобный поиск жилья</span>
+              </div>
+            </div>
+
+            <div class="hero__media">
+              <img src="images/hero.jpg" alt="Главный экран сервиса недвижимости" class="hero__image" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="properties" id="listings">
+      <h2>Доступные объекты</h2>
+      <div id="propertyList" class="property-list"></div>
+    </section>
+
+    <section class="section section--light" id="about">
+      <div class="section__inner">
+        <div class="about-card">
+          <div class="about-card__icon">i</div>
+          <div>
+            <h2 class="section__title">О системе</h2>
+            <p class="section__text">
+              Разрабатываемая система предназначена для автоматизации работы
+              с объявлениями о недвижимости. Пользователь может просматривать
+              доступные объекты, подавать заявки, регистрироваться и входить
+              в систему через веб-интерфейс.
+            </p>
+            <p class="section__text">
+              Решение ориентировано на простоту использования, удобную навигацию
+              и возможность дальнейшего расширения функциональности, включая
+              фильтрацию, личный кабинет и работу с базой данных.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="benefits">
+      <div class="section__inner">
+        <div class="section__heading">
+          <h2 class="section__title">Преимущества системы</h2>
+          <p class="section__subtitle">
+            Основные сильные стороны разработанного веб-приложения.
+          </p>
+        </div>
+
+        <div class="benefits">
+          <div class="benefits__image-wrap">
+            <img src="images/benefits.jpg" alt="Преимущества системы" class="benefits__image" />
+          </div>
+
+          <div class="benefits__cards">
+            <article class="info-card">
+              <h3>Удобный интерфейс</h3>
+              <p>Пользователь быстро находит нужные разделы, объявления и формы взаимодействия с системой.</p>
+            </article>
+
+            <article class="info-card">
+              <h3>Актуальная тематика</h3>
+              <p>Сервис ориентирован на работу с арендой и продажей недвижимости, что соответствует теме курсового проекта.</p>
+            </article>
+
+            <article class="info-card">
+              <h3>Интеграция с базой данных</h3>
+              <p>Система получает данные об объектах недвижимости из базы данных и отображает их на сайте.</p>
+            </article>
+
+            <article class="info-card">
+              <h3>Готовность к развитию</h3>
+              <p>Проект можно дополнить фильтрами, личным кабинетом, системой отзывов и онлайн-оплатой.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--light" id="features">
+      <div class="section__inner">
+        <div class="section__heading">
+          <h2 class="section__title">Функциональные возможности</h2>
+          <p class="section__subtitle">
+            Ниже представлены основные сценарии работы системы.
+          </p>
+        </div>
+
+        <div class="slider">
+          <button class="slider__control slider__control--prev" aria-label="Предыдущий слайд">‹</button>
+
+          <div class="slider__viewport">
+            <div class="slider__track">
+              <div class="slide slide--active">
+                <img src="images/project-1.jpg" alt="Регистрация пользователей" class="slide__image" />
+                <h3 class="slide__title">Регистрация пользователей</h3>
+                <p class="slide__text">
+                  На сайте реализована отдельная страница регистрации с базовой формой создания учетной записи.
+                </p>
+              </div>
+
+              <div class="slide">
+                <img src="images/project-2.jpg" alt="Интерфейс сервиса недвижимости" class="slide__image" />
+                <h3 class="slide__title">Просмотр объявлений</h3>
+                <p class="slide__text">
+                  Пользователь может ознакомиться с объектами недвижимости, их адресом и стоимостью аренды или продажи.
+                </p>
+              </div>
+
+              <div class="slide">
+                <div class="slide__image slide__image--placeholder">
+                  <span>Подача заявки на объект</span>
+                </div>
+                <h3 class="slide__title">Отправка заявки</h3>
+                <p class="slide__text">
+                  Через модальное окно пользователь может оставить заявку на интересующий объект недвижимости.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button class="slider__control slider__control--next" aria-label="Следующий слайд">›</button>
+
+          <div class="slider__dots">
+            <button class="slider__dot slider__dot--active" data-slide="0" aria-label="Слайд 1"></button>
+            <button class="slider__dot" data-slide="1" aria-label="Слайд 2"></button>
+            <button class="slider__dot" data-slide="2" aria-label="Слайд 3"></button>
+          </div>
+
+          <button class="slider__pause" type="button" aria-pressed="false">Пауза</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="contacts">
+      <div class="section__inner">
+        <div class="section__heading">
+          <h2 class="section__title">Обратная связь</h2>
+          <p class="section__subtitle">
+            Пример контактного блока и формы взаимодействия с пользователем.
+          </p>
+        </div>
+
+        <div class="contacts-grid">
+          <div class="contact-panel">
+            <h3>Контактная информация</h3>
+            <p><strong>Email:</strong> green-service@example.com</p>
+            <p><strong>Телефон:</strong> +7 (900) 000-00-00</p>
+            <p><strong>Город:</strong> Санкт-Петербург</p>
+            <p><strong>Режим работы:</strong> 10:00–19:00</p>
+          </div>
+
+          <form class="contact-form">
+            <input type="text" class="contact-form__input" placeholder="Ваше имя" required />
+            <input type="email" class="contact-form__input" placeholder="Электронная почта" required />
+            <textarea class="contact-form__textarea" placeholder="Введите сообщение" required></textarea>
+            <button type="submit" class="pill-button contact-form__button">Отправить сообщение</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <div>
+        <h3 class="footer__title">Зеленый сервис</h3>
+        <p class="footer__copy">
+          Учебный проект, демонстрирующий разработку веб-интерфейса и серверной части приложения для работы с недвижимостью.
+        </p>
+      </div>
+
+      <div class="footer__links">
+        <span class="footer__link">Главная</span>
+        <span class="footer__link">Регистрация</span>
+        <span class="footer__link">Вход</span>
+        <span class="footer__link">Контакты</span>
+      </div>
+
+      <p class="footer__copy">© <span id="current-year"></span> Зеленый сервис</p>
+    </div>
+  </footer>
+
+  <div class="modal" id="requestModal" aria-hidden="true">
+    <div class="modal__overlay" id="closeRequestModal"></div>
+    <div class="modal__content">
+      <button class="modal__close" id="closeRequestModalBtn" aria-label="Закрыть окно">×</button>
+      <h2 class="modal__title">Оставить заявку</h2>
+      <p class="modal__subtitle">
+        Заполните форму, и мы свяжемся с вами для уточнения деталей.
+      </p>
+
+      <form class="modal__form" id="requestForm">
+        <input type="text" class="modal__input" name="name" placeholder="Ваше имя" required />
+        <input type="tel" class="modal__input" name="phone" placeholder="Телефон" required />
+        <input type="email" class="modal__input" name="email" placeholder="Электронная почта" required />
+        <textarea class="modal__textarea" name="comment" placeholder="Комментарий или пожелания" required></textarea>
+        <button type="submit" class="pill-button modal__submit">Отправить заявку</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

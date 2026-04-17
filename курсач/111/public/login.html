@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Вход — Зеленый сервис</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="body-landing">
+  <main class="section">
+    <div class="section__inner">
+      <div class="contact-form" style="max-width: 520px; margin: 0 auto;">
+        <h2 class="section__title" style="font-size: 38px; margin-bottom: 16px;">Вход в систему</h2>
+        <p class="section__subtitle" style="margin-bottom: 24px;">
+          Для входа в админ-панель используйте учетную запись администратора.
+        </p>
+
+        <form id="loginForm">
+          <input
+            type="email"
+            name="email"
+            class="contact-form__input"
+            placeholder="Email"
+            required
+          />
+
+          <input
+            type="password"
+            name="password"
+            class="contact-form__input"
+            placeholder="Пароль"
+            required
+          />
+
+          <button type="submit" class="pill-button contact-form__button">Войти</button>
+        </form>
+
+        <p style="margin-top: 18px; color: #4d5a3e;">
+          Админ: <strong>admin@mail.com</strong><br />
+          Пароль: <strong>admin123</strong>
+        </p>
+
+        <p id="loginMessage" style="margin-top: 12px; color: #b00020;"></p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('loginMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const payload = {
+        email: formData.get('email'),
+        password: formData.get('password')
+      };
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          window.location.href = data.redirect;
+        } else {
+          message.textContent = data.message || 'Ошибка входа';
+        }
+      } catch (error) {
+        console.error(error);
+        message.textContent = 'Ошибка подключения к серверу';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Регистрация — Зеленый сервис</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #c9dc7c 0%, #b4cf4f 100%);
+      padding: 24px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+      background: rgba(226, 238, 175, 0.96);
+      border-radius: 26px;
+      box-shadow: 0 18px 45px rgba(74, 94, 18, 0.22);
+      padding: 28px 24px 20px;
+      text-align: center;
+    }
+
+    .auth-card__icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 14px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #d9ef74 0%, #9bc42d 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 10px 20px rgba(114, 142, 29, 0.25);
+    }
+
+    .auth-card__title {
+      margin: 0 0 8px;
+      font-size: 34px;
+      font-weight: 800;
+      color: #1f1f1f;
+    }
+
+    .auth-card__subtitle {
+      margin: 0 0 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #54643a;
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .auth-form__group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .auth-form__label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #46552e;
+    }
+
+    .auth-form__input {
+      width: 100%;
+      border: none;
+      outline: none;
+      border-radius: 14px;
+      background: #f7faeb;
+      padding: 13px 16px;
+      font-size: 14px;
+      color: #1f1f1f;
+      box-shadow: inset 0 0 0 1px rgba(143, 163, 76, 0.18);
+    }
+
+    .auth-form__submit {
+      margin-top: 6px;
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      padding: 15px 18px;
+      background: linear-gradient(135deg, #b8d93f 0%, #9fcb2a 100%);
+      color: #1f1f1f;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(126, 153, 36, 0.24);
+    }
+
+    .auth-card__message {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #b00020;
+      text-align: center;
+    }
+
+    .auth-card__link {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 12px;
+      color: #56653c;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="auth-page">
+    <section class="auth-card">
+      <div class="auth-card__icon">📝</div>
+
+      <h1 class="auth-card__title">Регистрация</h1>
+      <p class="auth-card__subtitle">
+        Создайте учетную запись для работы с системой.
+      </p>
+
+      <form id="registerForm" class="auth-form">
+        <div class="auth-form__group">
+          <label class="auth-form__label" for="name">Имя</label>
+          <input id="name" name="name" type="text" class="auth-form__input" placeholder="Введите имя" required />
+        </div>
+
+        <div class="auth-form__group">
+          <label class="auth-form__label" for="phone">Телефон</label>
+          <input id="phone" name="phone" type="tel" class="auth-form__input" placeholder="+7-999-999-99-99" required />
+        </div>
+
+        <div class="auth-form__group">
+          <label class="auth-form__label" for="email">Электронная почта</label>
+          <input id="email" name="email" type="email" class="auth-form__input" placeholder="Введите почту" required />
+        </div>
+
+        <div class="auth-form__group">
+          <label class="auth-form__label" for="password">Пароль</label>
+          <input id="password" name="password" type="password" class="auth-form__input" placeholder="Введите пароль" required />
+        </div>
+
+        <button type="submit" class="auth-form__submit">Зарегистрироваться</button>
+      </form>
+
+      <p id="registerMessage" class="auth-card__message"></p>
+
+      <a href="login.html" class="auth-card__link">Уже есть аккаунт? Войти</a><br />
+      <a href="index.html" class="auth-card__link">← Вернуться на главную</a>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const message = document.getElementById('registerMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const payload = {
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        password: formData.get('password')
+      };
+
+      message.textContent = '';
+
+      try {
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          alert('Регистрация прошла успешно');
+          window.location.href = data.redirect || '/login.html';
+        } else {
+          message.textContent = data.message || 'Ошибка регистрации';
+        }
+      } catch (error) {
+        console.error(error);
+        message.textContent = 'Ошибка подключения к серверу';
+      }
+    });
+  </script>
+</body>
+</html>
